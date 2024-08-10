@@ -1,0 +1,44 @@
+#dropdown {
+    position: relative; /* Position relative for absolute positioning of content */
+    display: inline-block;
+}
+
+#dropdown-button {
+    padding: 10px 15px; /* Padding for the dropdown button */
+    background-color: #007bff; /* Button background color */
+    color: white; /* Button text color */
+    border: none; /* Remove border */
+    border-radius: 5px; /* Rounded corners */
+    cursor: pointer; /* Cursor changes on hover */
+}
+
+#dropdown-content {
+    display: none; /* Initially hide the dropdown content */
+    position: absolute; /* Position dropdown content below the button */
+    background-color: white; /* Background color for dropdown */
+    border: 1px solid #007bff; /* Border color */
+    border-radius: 5px; /* Rounded corners */
+    z-index: 1; /* Ensure dropdown content is above other content */
+    max-height: 200px; /* Set a fixed max height for scrolling */
+    width: 200px; /* Set a fixed width for the dropdown */
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds max height */
+}
+
+.item {
+    padding: 10px; /* Padding for each item */
+    cursor: pointer; /* Cursor changes on hover */
+}
+
+.item:hover {
+    background-color: #f0f0f0; /* Change background on hover */
+}
+
+.selected {
+    background-color: #28a745; /* Green background for selected item */
+    color: white; /* Change text color to white */
+}
+
+/* Show dropdown content when the button is clicked */
+.show {
+    display: block; /* Show the dropdown content */
+}

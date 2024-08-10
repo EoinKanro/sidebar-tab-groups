@@ -11,9 +11,11 @@
   "background": {
     "scripts": ["js/background.js"],
     "type": "module",
-    "persistent": true
+    "persistent": false
   },
   "web_accessible_resources": [
-    "js/tabsGroup.js"
+    "js/tabsGroup.js",
+    "editGroup.html",
+    "js/editGroup.js"
   ]
 }
