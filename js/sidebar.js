@@ -3,7 +3,12 @@ import {TabsGroup, Tab, saveGroup, getGroupName, getAllTabs, saveCurrentGroup, g
 await saveCurrentGroup(null);
 
 // Event listener for creating a new group
-document.getElementById('create-group').addEventListener('click', clickCreateNewGroup);
+document.getElementById('create-group').addEventListener('click', () => {
+    // browser.tabs.create({
+    //     url: browser.runtime.getURL("editGroup.html")
+    // })
+    clickCreateNewGroup();
+});
 
 async function clickCreateNewGroup() {
     //todo popup
@@ -68,11 +73,6 @@ async function openTabs(group) {
     //save null to prevent updating group in background
     await saveCurrentGroup(null);
 
-    //filter unsupported links
-    group.tabs = group.tabs
-        .filter(tab => !tab.url.startsWith("about:") || tab.url === "about:blank")
-        .map(tab => tab);
-
     //create empty tab in empty group
     if (group.tabs.length <= 0) {
         group.tabs.push(new Tab(0, "about:blank"));
@@ -80,21 +80,44 @@ async function openTabs(group) {
 
     //open all tabs from group and save ids
     for (const tab of group.tabs) {
-        const createdTab = await browser.tabs.create({
-            url: tab.url
-        });
-        tab.id = createdTab.id;
+        try {
+            const url = tab.url;
+
+            let createdTab;
+            if (url.startsWith("http") || url === "about:blank") {
+                createdTab = await browser.tabs.create({
+                    url: tab.url
+                });
+            } else {
+                createdTab = await browser.tabs.create({
+                    url: browser.runtime.getURL(url)
+                });
+            }
+
+            tab.id = createdTab.id;
+        } catch (e) {
+            console.error(`Can't open tab: ${tab.url}`);
+        }
     }
 
     //close old tabs
     const openedIds = group.tabs.map(tab => tab.id);
-    const allTabs = await getAllTabs();
+    let allTabs = await getAllTabs();
     const idsToClose = allTabs
         .filter(tab => !openedIds.includes(tab.id))
         .map(tab => tab.id);
     await browser.tabs.remove(idsToClose);
 
+    //update group after possible errors
+    allTabs = await getAllTabs();
+    const groupTabs = []
+    allTabs.forEach(tab => {
+        groupTabs.push(new Tab(tab.id, tab.url));
+    })
+    group.tabs = groupTabs;
+
     //save for performing update in background
+    await saveGroup(group);
     await saveCurrentGroup(group);
 }
 
