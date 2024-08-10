@@ -1,31 +1,52 @@
+import {Tab, currentGroupName, saveCurrentGroup, saveGroup} from "./tabsGroup.js";
+
+let currentGroup;
+
 browser.runtime.onInstalled.addListener(() => {
     console.log("Tab Manager Extension Installed");
 });
 
-// Automatically save tab groups when the browser window is closed
-browser.windows.onRemoved.addListener(windowId => {
-    browser.tabs.query({windowId}, (tabs) => {
-        if (tabs.length > 0) {
-            let group = {
-                id: new Date().getTime(),
-                tabs: tabs.map(tab => tab.id)
-            };
-            browser.storage.local.set({[group.id]: group}).then(() => {
-                console.log("Group automatically saved:", group);
-            });
+//save currentGroup to temp variable on update
+browser.storage.local.onChanged.addListener((changes, areaName) => {
+    if (changes[currentGroupName]) {
+        currentGroup = changes[currentGroupName].newValue;
+    }
+});
+
+//save tab to current group when opened
+browser.tabs.onCreated.addListener(async (tab) => {
+    if (currentGroup) {
+        console.log(`Saving new tab to current group: ${JSON.stringify(currentGroup, null, 0)}`)
+
+        currentGroup.tabs.push(new Tab(tab.id, tab.url));
+        await saveCurrentGroup(currentGroup)
+        await saveGroup(currentGroup)
+    }
+});
+
+//save tab if it was updated
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (currentGroup && changeInfo.status && changeInfo.status === "complete") {
+        const tabToChange = currentGroup.tabs.filter(tabF => tabF.id === tab.id)[0];
+        if (!tabToChange || tabToChange.url === tab.url) {
+            return
         }
-    });
+
+        console.log(`Updating tab info: ${JSON.stringify(tab, null, 0)} in current group: ${JSON.stringify(currentGroup, null, 0)}`);
+        tabToChange.url = tab.url;
+
+        await saveCurrentGroup(currentGroup)
+        await saveGroup(currentGroup)
+    }
 });
 
-//update current
-// Add event listener for when a new tab is opened
-browser.tabs.onCreated.addListener((tab) => {
-    console.log(`A new tab has been opened: ID ${tab.id}, Title: ${tab.title}`);
-    // You can add your code here for when a tab is created
-});
+//remove tab from current group when closed
+browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+    if (currentGroup) {
+        console.log(`Deleting tab: ${tabId} from current group: ${JSON.stringify(currentGroup, null, 0)}`)
 
-// Add event listener for when a tab is closed
-browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    console.log(`A tab has been closed: ID ${tabId}`);
-    // You can add your code here for when a tab is removed
+        currentGroup.tabs = currentGroup.tabs.filter((tab) => tab.id !== tabId);
+        await saveCurrentGroup(currentGroup)
+        await saveGroup(currentGroup)
+    }
 });

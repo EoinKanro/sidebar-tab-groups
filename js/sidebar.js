@@ -1,11 +1,4 @@
-import {TabsGroup, saveGroup, getGroupName, getAllTabs, saveCurrentGroup, getGroup, getCurrentGroup} from "./tabsGroup.js";
-
-class Tab {
-    constructor(id, url) {
-        this.id = id;
-        this.url = url;
-    }
-}
+import {TabsGroup, Tab, saveGroup, getGroupName, getAllTabs, saveCurrentGroup, getGroup, getCurrentGroup} from "./tabsGroup.js";
 
 await saveCurrentGroup(null);
 
