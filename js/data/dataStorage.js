@@ -62,7 +62,7 @@ export async function deleteGroup(groupId, currentContext) {
  * @returns {Promise<unknown>} array/null
  */
 export async function getAllGroups(currentContext) {
-    return await sendRequestToDatabase(getAllFromDatabase, tabGroupsName, new Date().getTime(), currentContext);
+    return await sendRequestToDatabase(getAllFromDatabase, tabGroupsName,null, currentContext);
 }
 
 
@@ -150,21 +150,21 @@ function sendRequestToDatabaseCurrentContext(event, storeName, data) {
 
 function sendRequestToDatabaseSeparateContext(event, storeName, data) {
     return new Promise(async (resolve, reject) => {
-        const message = new Request(storeName, data, new Date().getTime());
+        const messageToSend = new Request(storeName, data, crypto.randomUUID());
 
         if (event.startsWith("get")) {
             const tempListener = (message, sender, sendResponse) => {
                 //message - EventMessage from events.js. message.data - Response from database.js
-                if (message.command === databaseAnswer && message.data.id === data) {
+                if (message.command === databaseAnswer && message.data.id === messageToSend.id) {
                     browser.runtime.onMessage.removeListener(tempListener);
                     resolve(message.data.data);
                 }
             }
 
             await browser.runtime.onMessage.addListener(tempListener);
-            notify(event, message);
+            notify(event, messageToSend);
         } else {
-            notify(event, message);
+            notify(event, messageToSend);
             resolve(null);
         }
     })
