@@ -74,7 +74,7 @@ document.getElementById('submit').onclick = async function () {
     if (!activeGroup || activeGroup.id === group.id) {
         await saveActiveGroup(group, true);
     }
-    notify(notifySidebarReloadGroups, null);
+    notify(notifySidebarReloadGroups, false);
     window.close();
 };
 
@@ -82,22 +82,19 @@ document.getElementById('submit').onclick = async function () {
 deleteButton.onclick = async function () {
     let confirmDelete = confirm("Are you sure you want to delete this group?");
 
-    //TODO change group if active. mb notify sidebar
     if (confirmDelete) {
         await deleteGroup(groupToEdit.id, false);
 
-
+        let openTabs = false;
         if (groupToEdit.id === activeGroup.id) {
             const allGroups = await getAllGroups(false);
-            console.log(allGroups);
-            console.log(allGroups.length > 0)
+
             if (allGroups && allGroups.length > 0) {
-                console.log(allGroups);
-                console.log(allGroups[0]);
                 await saveActiveGroup(allGroups[0], true);
+                openTabs = true;
             }
         }
-        notify(notifySidebarReloadGroups, null);
+        notify(notifySidebarReloadGroups, openTabs);
         window.close();
     }
 }
