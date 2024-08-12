@@ -140,11 +140,9 @@ function sendRequestToDatabaseSeparateContext(event, storeName, data) {
     return new Promise((resolve, reject) => {
         browser.runtime.sendMessage(new EventMessage(event, new Request(storeName, data)))
             .then(response => {
-                console.log(response)
                 resolve(response);
             })
             .catch(error => {
-                console.log(error)
                 resolve(null);
             });
     })

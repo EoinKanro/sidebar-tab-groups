@@ -6,7 +6,7 @@ export class EventMessage {
 }
 
 export function notify(event, data) {
-    console.log(`[${event}] ${JSON.stringify(data)}`);
+    console.log(`Sending to runtime. Event: [${event}] Data: ${JSON.stringify(data)}`);
     browser.runtime.sendMessage(new EventMessage(event, data));
 }
 
