@@ -1,12 +1,12 @@
 {
   "manifest_version": 2,
-  "name": "My Tab Manager",
-  "version": "1.0",
+  "name": "Sidebar Tab Groups",
+  "version": "0.1",
   "description": "A custom tab management extension in the sidebar",
   "permissions": ["tabs", "storage"],
   "sidebar_action": {
     "default_panel": "html/sidebar.html",
-    "default_title": "Tab Manager"
+    "default_title": "Sidebar Tab Groups"
   },
   "background": {
     "scripts": ["js/background.js"],
@@ -15,7 +15,7 @@
   },
   "web_accessible_resources": [
     "js/tabsGroup.js",
-    "editGroup.html",
+    "html/editGroup.html",
     "js/editGroup.js"
   ]
 }
