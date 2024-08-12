@@ -150,7 +150,7 @@ function sendRequestToDatabaseCurrentContext(event, storeName, data) {
 
 function sendRequestToDatabaseSeparateContext(event, storeName, data) {
     return new Promise(async (resolve, reject) => {
-        const message = new Request(storeName, data);
+        const message = new Request(storeName, data, new Date().getTime());
 
         if (event.startsWith("get")) {
             const tempListener = (message, sender, sendResponse) => {
