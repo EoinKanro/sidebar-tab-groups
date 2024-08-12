@@ -19,33 +19,10 @@ await reloadGroups();
 
 const groupIdAttribute = "groupId";
 
-const contextMenu = document.getElementById('context-menu');
-
 //Open create group on click
 document.getElementById('create-group').addEventListener('click', async () => {
     await deleteGroupToEdit()
     openGroupEditor();
-});
-
-//Process clicks on context menu of groups buttons
-contextMenu.addEventListener('click', async (event) => {
-    console.log(event)
-    if (event.target.tagName === 'LI' && event.target.id === 'edit-button') {
-        const groupToEditId = contextMenu.getAttribute(groupIdAttribute);
-        const groupToEdit = await getGroup(Number(groupToEditId), true);
-        const tempGroup = new TabsGroup(groupToEdit.name, groupToEdit.icon)
-        tempGroup.id = groupToEdit.id;
-        await saveGroupToEdit(tempGroup);
-        openGroupEditor();
-    }
-    contextMenu.style.display = 'none';
-});
-
-//Hide context menu on click outside
-document.addEventListener('click', (event) => {
-    if (!event.target.classList.contains('button') && event.target.closest('#context-menu') === null) {
-        contextMenu.style.display = 'none';
-    }
 });
 
 //Reload groups in sidebar on any updates
@@ -89,14 +66,14 @@ async function createButton(group) {
     });
 
     //open context menu
-    button.addEventListener('contextmenu', (event) => {
+    button.addEventListener('contextmenu', async (event) => {
         event.preventDefault();
 
-        // Position the custom menu at the cursor position
-        contextMenu.setAttribute(groupIdAttribute, group.id);
-        contextMenu.style.left = `${event.pageX}px`;
-        contextMenu.style.top = `${event.pageY}px`;
-        contextMenu.style.display = 'block';
+        const groupToEdit = await getGroup(group.id, true);
+        const tempGroup = new TabsGroup(groupToEdit.name, groupToEdit.icon)
+        tempGroup.id = groupToEdit.id;
+        await saveGroupToEdit(tempGroup);
+        openGroupEditor();
     });
 
     //add button
