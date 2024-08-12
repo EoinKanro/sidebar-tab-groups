@@ -1,18 +1,22 @@
 import {
-    TabsGroup,
     Tab,
     saveGroup,
-    getGroupName,
-    getAllTabs,
-    saveCurrentGroup,
+    getAllOpenedTabs,
     getGroup,
-    getCurrentGroup,
-    groupToUpdateName, saveGroupToUpdate
-} from "./tabsGroup.js";
+    saveActiveGroup, deleteActiveGroup, deleteGroupToEdit, getAllGroups
+} from "./data/dataStorage.js";
 
-await saveCurrentGroup(null);
+import {notifySidebarReloadGroups} from "./data/events.js";
 
-// Event listener for creating a new group
+import {initDatabase} from "./data/database.js";
+
+await initDatabase();
+
+await deleteActiveGroup(false);
+await deleteGroupToEdit();
+await reloadGroups();
+
+//Open create group on click
 document.getElementById('create-group').addEventListener('click', () => {
     browser.windows.create({
         url: browser.runtime.getURL("editGroup.html"),
@@ -20,47 +24,25 @@ document.getElementById('create-group').addEventListener('click', () => {
     })
 });
 
-//save groupToUpdateName
-browser.storage.local.onChanged.addListener((changes, areaName) => {
-    if (changes[groupToUpdateName]) {
-        const group = changes[groupToUpdateName];
-        if (group) {
-            saveGroupToUpdate(null);
-            clickCreateNewGroup(group);
-        }
+//Reload groups in sidebar on any updates
+browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
+    console.log(message)
+    if (message.command === notifySidebarReloadGroups) {
+        await reloadGroups()
     }
 });
 
-async function clickCreateNewGroup(group) {
-    //todo popup
+async function reloadGroups() {
+    const allGroups = await getAllGroups(true);
 
-    const currentGroup = await getCurrentGroup();
+    console.log(allGroups);
+    if (allGroups) {
+        const tabButtons = document.getElementById('tab-buttons');
+        tabButtons.innerHTML = '';
 
-    let newGroup;
-    if (!currentGroup) {
-        //save current tabs to new group if there is no currentGroup
-        const allTabs = await getAllTabs();
-
-        newGroup = new TabsGroup(new Date().getTime(),
-            "title",
-            "check_box",
-            allTabs.map(tab => new Tab(tab.id, tab.url))
-        );
-    } else {
-        newGroup = new TabsGroup(new Date().getTime(),
-            "title",
-            "check_box",
-            []
-        );
-    }
-
-    //save group to storage and create button
-    await saveGroup(newGroup);
-    await createButton(newGroup);
-
-    //set active if there is no active group
-    if (!currentGroup) {
-        await saveCurrentGroup(newGroup);
+        allGroups.forEach((group) => {
+            createButton(group);
+        })
     }
 }
 
@@ -78,9 +60,9 @@ async function createButton(group) {
 
     button.appendChild(span);
 
-    //open tabs of group on click
+    //open tabs of group on click and send group to background
     button.addEventListener('click', async () => {
-        const groupToOpen = await getGroup(getGroupName(group));
+        const groupToOpen = await getGroup(group.id, true);
         console.log(groupToOpen);
         await openTabs(groupToOpen);
     });
@@ -91,8 +73,8 @@ async function createButton(group) {
 
 // Open the tabs of selected group
 async function openTabs(group) {
-    //save null to prevent updating group in background
-    await saveCurrentGroup(null);
+    //delete to prevent updating group in background
+    await deleteActiveGroup(true);
 
     //create empty tab in empty group
     if (group.tabs.length <= 0) {
@@ -123,30 +105,22 @@ async function openTabs(group) {
 
     //close old tabs
     const openedIds = group.tabs.map(tab => tab.id);
-    let allTabs = await getAllTabs();
+    let allTabs = await getAllOpenedTabs();
     const idsToClose = allTabs
         .filter(tab => !openedIds.includes(tab.id))
         .map(tab => tab.id);
     await browser.tabs.remove(idsToClose);
 
     //update group after possible errors
-    allTabs = await getAllTabs();
+    allTabs = await getAllOpenedTabs();
     const groupTabs = []
     allTabs.forEach(tab => {
         groupTabs.push(new Tab(tab.id, tab.url));
     })
     group.tabs = groupTabs;
 
-    //save for performing update in background
-    await saveGroup(group);
-    await saveCurrentGroup(group);
+    //update after possible errors
+    await saveGroup(group, true);
+    //save for updating in background
+    await saveActiveGroup(group, true)
 }
-
-// Load and display existing tab groups when the sidebar opens
-browser.storage.local.get().then((groups) => {
-    for (const id in groups) {
-        if (id.startsWith("group-")) {
-            createButton(groups[id]);
-        }
-    }
-});
