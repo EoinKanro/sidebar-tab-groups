@@ -238,7 +238,7 @@ function loadTheme(theme) {
         
         .button-class:hover {
             background-color: ${colors.toolbar_field_focus} !important;
-            transition: 0.7s;
+            transition: 0.6s;
         }
         
         .selected {
