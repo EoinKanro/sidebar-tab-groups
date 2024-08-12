@@ -25,3 +25,28 @@ hr {
     'GRAD' 0,
     'opsz' 24
 }
+
+/* Styling for the custom context menu */
+#context-menu {
+    position: absolute;
+    display: none;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+#context-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#context-menu ul li {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+#context-menu ul li:hover {
+    background-color: #f0f0f0;
+}
