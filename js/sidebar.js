@@ -3,7 +3,7 @@ import {
     saveGroup,
     getAllOpenedTabs,
     getGroup,
-    saveActiveGroup, deleteActiveGroup, deleteGroupToEdit, getAllGroups
+    saveActiveGroup, deleteActiveGroup, deleteGroupToEdit, getAllGroups, saveWindowId
 } from "./data/dataStorage.js";
 
 import {notifySidebarReloadGroups} from "./data/events.js";
@@ -14,6 +14,7 @@ await initDatabase();
 
 await deleteActiveGroup(false);
 await deleteGroupToEdit();
+await saveWindowId(await getLatestWindowId());
 await reloadGroups();
 
 //Open create group on click
@@ -26,7 +27,6 @@ document.getElementById('create-group').addEventListener('click', () => {
 
 //Reload groups in sidebar on any updates
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    console.log(message)
     if (message.command === notifySidebarReloadGroups) {
         await reloadGroups()
     }
@@ -35,7 +35,6 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
 async function reloadGroups() {
     const allGroups = await getAllGroups(true);
 
-    console.log(allGroups);
     if (allGroups) {
         const tabButtons = document.getElementById('tab-buttons');
         tabButtons.innerHTML = '';
@@ -63,7 +62,6 @@ async function createButton(group) {
     //open tabs of group on click and send group to background
     button.addEventListener('click', async () => {
         const groupToOpen = await getGroup(group.id, true);
-        console.log(groupToOpen);
         await openTabs(groupToOpen);
     });
 
@@ -75,6 +73,9 @@ async function createButton(group) {
 async function openTabs(group) {
     //delete to prevent updating group in background
     await deleteActiveGroup(true);
+    const windowId = await getLatestWindowId();
+
+    group.windowId = windowId;
 
     //create empty tab in empty group
     if (group.tabs.length <= 0) {
@@ -89,11 +90,13 @@ async function openTabs(group) {
             let createdTab;
             if (url.startsWith("http") || url === "about:blank") {
                 createdTab = await browser.tabs.create({
-                    url: tab.url
+                    url: tab.url,
+                    windowId: windowId
                 });
             } else {
                 createdTab = await browser.tabs.create({
-                    url: browser.runtime.getURL(url)
+                    url: browser.runtime.getURL(url),
+                    windowId: windowId
                 });
             }
 
@@ -123,4 +126,17 @@ async function openTabs(group) {
     await saveGroup(group, true);
     //save for updating in background
     await saveActiveGroup(group, true)
+}
+
+async function getLatestWindowId() {
+    try {
+        let currentWindow = await browser.windows.getCurrent();
+
+        if (!currentWindow || !currentWindow.focused) {
+            currentWindow = await browser.windows.getLastFocused();
+        }
+        return currentWindow.id;
+    } catch (error) {
+        return null;
+    }
 }

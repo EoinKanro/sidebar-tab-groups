@@ -5,11 +5,6 @@ export class EventMessage {
     }
 }
 
-export function notify(event, data) {
-    console.log(`Sending to runtime. Event: [${event}] Data: ${JSON.stringify(data)}`);
-    browser.runtime.sendMessage(new EventMessage(event, data));
-}
-
 /**
  * Database requests
  */
@@ -27,3 +22,8 @@ export const notifyBackgroundCurrentGroupUpdated = "notifyBackgroundCurrentGroup
  * Sidebar requests
  */
 export const notifySidebarReloadGroups = "notifySidebarReloadGroups";
+
+export function notify(event, data) {
+    console.log(`Sending to runtime. Event: ${event}. Data: }`, data);
+    browser.runtime.sendMessage(new EventMessage(event, data));
+}
