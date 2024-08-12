@@ -35,6 +35,7 @@ if (groupToEdit) {
 //load symbols to selector
 symbols.symbols.forEach(symbol => {
     const button = document.createElement('button');
+    button.classList.add("button-class");
 
     const span = document.createElement('span');
     span.classList.add('material-symbols-outlined');
@@ -98,3 +99,46 @@ deleteButton.onclick = async function () {
         window.close();
     }
 }
+
+//load style
+let style = document.getElementById("js-style")
+if (!style) {
+    style = document.createElement('style');
+    style.id = "js-style";
+    document.head.appendChild(style);
+}
+browser.theme.getCurrent().then(theme => {
+    let colors;
+    if (theme?.colors) {
+        colors = theme.colors;
+    } else {
+        colors = {};
+        colors.popup = "#fff";
+        colors.popup_text = "rgb(21,20,26)";
+        colors.button = "rgba(207,207,216,.33)";
+        colors.button_active = "rgb(207,207,216)";
+    }
+
+    style.innerHTML =
+        `
+        body {
+            background-color: ${colors.popup};
+            color: ${colors.popup_text};
+        }
+        
+        .button-class {
+            background-color: ${colors.button};
+            color: ${colors.popup_text};
+        }
+        
+        .button-class:hover {
+            background-color: ${colors.button_active} !important;
+            transition: 0.6s;
+        }
+        
+        #icon-selected {
+            background-color: ${colors.button_active} !important;
+            color: ${colors.popup_text};
+        }
+        `;
+})
