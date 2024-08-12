@@ -70,9 +70,7 @@ async function createButton(group) {
         event.preventDefault();
 
         const groupToEdit = await getGroup(group.id, true);
-        const tempGroup = new TabsGroup(groupToEdit.name, groupToEdit.icon)
-        tempGroup.id = groupToEdit.id;
-        await saveGroupToEdit(tempGroup);
+        await saveGroupToEdit(groupToEdit);
         openGroupEditor();
     });
 
