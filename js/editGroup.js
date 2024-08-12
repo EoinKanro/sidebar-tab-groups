@@ -3,7 +3,7 @@ import {
     getGroupToEdit,
     saveGroup,
     deleteGroup,
-    deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab, saveActiveGroup, getWindowId
+    deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab, saveActiveGroup, getWindowId, getAllGroups
 } from "./data/dataStorage.js";
 
 import {
@@ -12,6 +12,7 @@ import {
 } from "./data/events.js";
 
 const groupToEdit = await getGroupToEdit();
+const activeGroup = await getActiveGroup();
 const windowId = await getWindowId();
 const symbols = await (await fetch('../font/google-symbols.json')).json();
 
@@ -53,7 +54,6 @@ document.getElementById('submit').onclick = async function () {
     group.windowId = windowId;
 
     //save current tabs to new group if there is no currentGroup
-    const activeGroup = await getActiveGroup();
     if (!activeGroup) {
         const allTabs = await getAllOpenedTabs();
         group.tabs = allTabs
@@ -84,7 +84,19 @@ deleteButton.onclick = async function () {
 
     //TODO change group if active. mb notify sidebar
     if (confirmDelete) {
-        await deleteGroup(groupToEdit, false);
+        await deleteGroup(groupToEdit.id, false);
+
+
+        if (groupToEdit.id === activeGroup.id) {
+            const allGroups = await getAllGroups(false);
+            console.log(allGroups);
+            console.log(allGroups.length > 0)
+            if (allGroups && allGroups.length > 0) {
+                console.log(allGroups);
+                console.log(allGroups[0]);
+                await saveActiveGroup(allGroups[0], true);
+            }
+        }
         notify(notifySidebarReloadGroups, null);
         window.close();
     }
