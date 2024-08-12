@@ -28,7 +28,7 @@ browser.tabs.onCreated.addListener(async (tab) => {
 
 //save tab if it was updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (isAvailableToUpdate(tab.windowId) && changeInfo.status && changeInfo.status === "complete") {
+    if (isAvailableToUpdate(tab.windowId) && changeInfo.url) {
         const tabToChange = activeGroup.tabs.filter(tabF => tabF.id === tab.id)[0];
         if (!tabToChange || tabToChange.url === tab.url) {
             return
