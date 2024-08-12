@@ -25,6 +25,22 @@ await saveWindowId((await getLatestWindow()).id);
 const selectedName = "selected";
 await reloadGroups(true);
 
+//load theme of sidebar
+let style = document.getElementById("js-style")
+if (!style) {
+    style = document.createElement('style');
+    style.id = "js-style";
+    document.head.appendChild(style);
+}
+browser.theme.getCurrent().then(theme => {
+    loadTheme(theme);
+})
+
+//update sidebar on update theme
+browser.theme.onUpdated.addListener(({ theme }) => {
+    loadTheme(theme);
+});
+
 //Open create group on click
 document.getElementById('create-group').addEventListener('click', async () => {
     await deleteGroupToEdit()
@@ -195,4 +211,38 @@ async function openGroupEditor() {
         width: viewportWidth,
         height: viewportHeight
     })
+}
+
+function loadTheme(theme) {
+    let colors
+    if (theme?.colors) {
+        colors = theme.colors;
+    } else {
+        colors = {};
+
+        colors.toolbar_field = "rgb(240, 240, 244)"
+        colors.toolbar_field_text = "rgb(21, 20, 26)"
+        colors.toolbar_field_focus = "white"
+    }
+
+    style.innerHTML =
+        `
+        body {
+            background-color: ${colors.toolbar_field};
+        }
+        
+        .button-class {
+            background-color: ${colors.toolbar_field};
+            color: ${colors.toolbar_field_text};
+        }
+        
+        .button-class:hover {
+            background-color: ${colors.toolbar_field_focus} !important;
+            transition: 0.7s;
+        }
+        
+        .selected {
+            background-color: ${colors.toolbar_field_focus} !important;
+        }
+        `;
 }
