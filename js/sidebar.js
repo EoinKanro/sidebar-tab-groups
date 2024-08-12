@@ -3,7 +3,13 @@ import {
     saveGroup,
     getAllOpenedTabs,
     getGroup,
-    saveActiveGroup, deleteActiveGroup, deleteGroupToEdit, getAllGroups, saveWindowId, saveGroupToEdit, TabsGroup
+    saveActiveGroup,
+    deleteActiveGroup,
+    deleteGroupToEdit,
+    getAllGroups,
+    saveWindowId,
+    saveGroupToEdit,
+    getActiveGroup
 } from "./data/dataStorage.js";
 
 import {notifySidebarReloadGroups} from "./data/events.js";
@@ -17,7 +23,7 @@ await deleteGroupToEdit();
 await saveWindowId(await getLatestWindowId());
 await reloadGroups();
 
-const groupIdAttribute = "groupId";
+const selectedName = "selected";
 
 //Open create group on click
 document.getElementById('create-group').addEventListener('click', async () => {
@@ -34,24 +40,31 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
 
 async function reloadGroups() {
     const allGroups = await getAllGroups(true);
+    const activeGroup = await getActiveGroup();
 
     if (allGroups) {
         const tabButtons = document.getElementById('tab-buttons');
         tabButtons.innerHTML = '';
 
         allGroups.forEach((group) => {
-            createButton(group);
+            const selected = group.id === activeGroup.id;
+            createButton(group, selected);
         })
     }
 }
 
-async function createButton(group) {
+async function createButton(group, selected) {
     //todo colors
     const tabButtons = document.getElementById('tab-buttons');
 
     const button = document.createElement('button');
     button.title=group.name;
     button.classList.add('button-class');
+
+    //set style selected
+    if (selected) {
+        button.classList.add(selectedName);
+    }
 
     const span = document.createElement('span');
     span.classList.add('material-symbols-outlined');
@@ -61,6 +74,14 @@ async function createButton(group) {
 
     //open tabs of group on click and send group to background
     button.addEventListener('click', async () => {
+        //remove style selected from all buttons
+        for (let child of tabButtons.children) {
+            child.classList.remove(selectedName)
+        }
+
+        //add to current button style selected
+        button.classList.add(selectedName);
+
         const groupToOpen = await getGroup(group.id, true);
         await openTabs(groupToOpen);
     });
