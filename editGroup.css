@@ -1,11 +1,11 @@
 #icons-list {
-    width: 60vw;
-    height: 30vh;
+    width: 100%;
+    height: 45vh;
     overflow-y: auto;
     overflow-x: hidden;
     border: 1px solid #ccc;
 }
 
 .icon-span {
-    font-size: 2vw;
+    font-size: 3vw;
 }
