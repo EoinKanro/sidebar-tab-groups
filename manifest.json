@@ -4,14 +4,14 @@
   "version": "0.1",
   "description": "A custom tab management extension in the sidebar",
   "permissions": ["tabs", "storage"],
-  "sidebar_action": {
-    "default_panel": "html/sidebar.html",
-    "default_title": "Sidebar Tab Groups"
-  },
   "background": {
     "scripts": ["js/background.js"],
     "type": "module",
     "persistent": true
+  },
+  "sidebar_action": {
+    "default_panel": "html/sidebar.html",
+    "default_title": "Sidebar Tab Groups"
   },
   "web_accessible_resources": [
     "js/tabsGroup.js",

@@ -1,29 +1,9 @@
-import {
-    Tab,
-    saveGroup,
-    getAllOpenedTabs,
-    getGroup,
-    saveActiveGroup,
-    deleteActiveGroup,
-    deleteGroupToEdit,
-    getAllGroups,
-    saveWindowId,
-    saveGroupToEdit,
-    getActiveGroup
-} from "./data/dataStorage.js";
-
+import {getGroup, deleteGroupToEdit, getAllGroups, saveGroupToEdit, getActiveGroup} from "./data/dataStorage.js";
 import {notifySidebarReloadGroups} from "./data/events.js";
-
-import {initDatabase} from "./data/database.js";
-
-await initDatabase();
-
-await deleteActiveGroup(false);
-await deleteGroupToEdit();
-await saveWindowId((await getLatestWindow()).id);
+import {getLatestWindow, openTabs} from "./data/utils.js";
 
 const selectedName = "selected";
-await reloadGroups(true);
+await reloadGroups(false);
 
 //load theme of sidebar
 let style = document.getElementById("js-style")
@@ -47,7 +27,7 @@ document.getElementById('create-group').addEventListener('click', async () => {
     await openGroupEditor();
 });
 
-//Reload groups in sidebar on any updates
+//Reload groups buttons in sidebar on event
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
     if (message.command === notifySidebarReloadGroups) {
         await reloadGroups(message.data)
@@ -55,15 +35,10 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
 });
 
 async function reloadGroups(isOpenTabs) {
-    const allGroups = await getAllGroups(true);
+    const allGroups = await getAllGroups(false);
     let activeGroup = await getActiveGroup();
 
     if (allGroups) {
-        //open on load browser
-        if (!activeGroup && allGroups.length > 0) {
-            activeGroup = allGroups[0];
-        }
-
         const tabButtons = document.getElementById('tab-buttons');
         tabButtons.innerHTML = '';
 
@@ -74,7 +49,7 @@ async function reloadGroups(isOpenTabs) {
     }
 
     if (activeGroup && isOpenTabs) {
-        await openTabs(activeGroup);
+        await callOpenTabs(activeGroup);
     }
 }
 
@@ -113,15 +88,15 @@ async function createButton(group, selected) {
         //add to current button style selected
         button.classList.add(selectedName);
 
-        const groupToOpen = await getGroup(group.id, true);
-        await openTabs(groupToOpen);
+        const groupToOpen = await getGroup(group.id, false);
+        await callOpenTabs(groupToOpen);
     });
 
     //open context menu
     button.addEventListener('contextmenu', async (event) => {
         event.preventDefault();
 
-        const groupToEdit = await getGroup(group.id, true);
+        const groupToEdit = await getGroup(group.id, false);
         await saveGroupToEdit(groupToEdit);
         await openGroupEditor();
     });
@@ -130,79 +105,8 @@ async function createButton(group, selected) {
     tabButtons.appendChild(button);
 }
 
-// Open the tabs of selected group
-async function openTabs(group) {
-    console.log("Opening tabs", group)
-    //delete to prevent updating group in background
-    await deleteActiveGroup(true);
-    const windowId = (await getLatestWindow()).id;
-
-    group.windowId = windowId;
-
-    //open all tabs from group and save ids
-    let openedTabs = [];
-    for (const tab of group.tabs) {
-        try {
-            const url = tab.url;
-
-            let createdTab;
-            if (url.startsWith("http")) {
-                createdTab = await browser.tabs.create({
-                    url: tab.url,
-                    windowId: windowId
-                });
-            } else {
-                createdTab = await browser.tabs.create({
-                    url: browser.runtime.getURL(url),
-                    windowId: windowId
-                });
-            }
-
-            tab.id = createdTab.id;
-            openedTabs.push(tab);
-        } catch (e) {
-            console.error(`Can't open tab: ${tab.url}`);
-        }
-    }
-
-    //create empty tab in empty group
-    if (openedTabs.length <= 0) {
-        const tab = new Tab(0, "about:blank");
-        const createdTab = await browser.tabs.create({
-            url: tab.url,
-            windowId: windowId
-        });
-        tab.id = createdTab.id;
-        openedTabs.push(tab);
-    }
-
-    //close old tabs
-    const openedIds = openedTabs.map(tab => tab.id);
-    let allTabs = await getAllOpenedTabs();
-    const idsToClose = allTabs
-        .filter(tab => !openedIds.includes(tab.id))
-        .map(tab => tab.id);
-    await browser.tabs.remove(idsToClose);
-
-    //update group after possible errors
-    group.tabs = openedTabs;
-    await saveGroup(group, true);
-
-    //save for updating in background
-    await saveActiveGroup(group, true)
-}
-
-async function getLatestWindow() {
-    try {
-        let currentWindow = await browser.windows.getCurrent();
-
-        if (!currentWindow || !currentWindow.focused) {
-            currentWindow = await browser.windows.getLastFocused();
-        }
-        return currentWindow;
-    } catch (error) {
-        return null;
-    }
+async function callOpenTabs(group) {
+    await openTabs(group, true, false);
 }
 
 async function openGroupEditor() {
