@@ -63,16 +63,16 @@ export async function getActiveGroup() {
     return await getFromLocalStorage(activeGroupName);
 }
 
-export async function saveActiveGroup(group, isNotify) {
+export async function saveActiveGroup(group, notifyBackground) {
     await saveToLocalStorage(activeGroupName, group);
-    if (isNotify) {
+    if (notifyBackground) {
         notify(notifyBackgroundCurrentGroupUpdated, group);
     }
 }
 
-export async function deleteActiveGroup(isNotify) {
+export async function deleteActiveGroup(notifyBackground) {
     await saveToLocalStorage(activeGroupName, null);
-    if (isNotify) {
+    if (notifyBackground) {
         notify(notifyBackgroundCurrentGroupUpdated, null);
     }
 }
