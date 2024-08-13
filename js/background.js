@@ -89,3 +89,8 @@ function isAvailableToUpdate(windowId) {
 async function save() {
     await saveGroup(activeGroup)
 }
+
+//remove custom context menu items
+browser.contextMenus.onHidden.addListener(() => {
+    browser.contextMenus.removeAll();
+});

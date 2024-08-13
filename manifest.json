@@ -3,7 +3,7 @@
   "name": "Sidebar Tab Groups",
   "version": "0.1",
   "description": "A custom tab management extension in the sidebar",
-  "permissions": ["tabs", "storage"],
+  "permissions": ["tabs", "storage", "contextMenus"],
   "background": {
     "scripts": ["js/background.js"],
     "type": "module",

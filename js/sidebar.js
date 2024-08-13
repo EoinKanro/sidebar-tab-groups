@@ -7,6 +7,7 @@ import {
 } from "./data/events.js";
 import {getLatestWindow, openTabs} from "./data/utils.js";
 
+const editGroupId = "edit-group-";
 const selectedName = "selected";
 let editIsOpen = false;
 
@@ -41,6 +42,15 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
     } else if (message.command === notifySidebarEditGroupIsClosed) {
         console.log("Edit group was closed");
         editIsOpen = false;
+    }
+});
+
+//Handle click to edit
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId.startsWith(editGroupId)) {
+        const id = info.menuItemId.replace(editGroupId,"");
+        const groupToEdit = await getGroup(Number(id));
+        await openGroupEditor(groupToEdit);
     }
 });
 
@@ -102,12 +112,16 @@ async function createButton(group, selected) {
         await callOpenTabs(groupToOpen);
     });
 
-    //open context menu
-    button.addEventListener('contextmenu', async (event) => {
-        event.preventDefault();
+    // Attach a contextmenu event listener to the button
+    button.addEventListener('contextmenu', (event) => {
+        // Remove any existing custom context menu to avoid duplicates
+        browser.contextMenus.removeAll();
 
-        const groupToEdit = await getGroup(group.id);
-        await openGroupEditor(groupToEdit);
+        browser.contextMenus.create({
+            id: `${editGroupId}${group.id}`,
+            title: `Edit Group ${group.name}`,
+            contexts: ["all"]
+        });
     });
 
     //add button
