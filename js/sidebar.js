@@ -35,7 +35,7 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
 });
 
 async function reloadGroups(isOpenTabs) {
-    const allGroups = await getAllGroups(false);
+    const allGroups = await getAllGroups();
     let activeGroup = await getActiveGroup();
 
     if (allGroups) {
@@ -88,7 +88,7 @@ async function createButton(group, selected) {
         //add to current button style selected
         button.classList.add(selectedName);
 
-        const groupToOpen = await getGroup(group.id, false);
+        const groupToOpen = await getGroup(group.id);
         await callOpenTabs(groupToOpen);
     });
 
@@ -96,7 +96,7 @@ async function createButton(group, selected) {
     button.addEventListener('contextmenu', async (event) => {
         event.preventDefault();
 
-        const groupToEdit = await getGroup(group.id, false);
+        const groupToEdit = await getGroup(group.id);
         await saveGroupToEdit(groupToEdit);
         await openGroupEditor();
     });
@@ -106,7 +106,7 @@ async function createButton(group, selected) {
 }
 
 async function callOpenTabs(group) {
-    await openTabs(group, true, false);
+    await openTabs(group, true);
 }
 
 async function openGroupEditor() {
