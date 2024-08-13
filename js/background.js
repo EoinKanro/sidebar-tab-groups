@@ -21,7 +21,7 @@ async function init() {
     const windowId = (await getLatestWindow()).id
     await saveWindowId(windowId);
 
-    const allGroups = await getAllGroups(true);
+    const allGroups = await getAllGroups();
     //open first group on load addon
     if (allGroups && allGroups.length > 0) {
         activeGroup = allGroups[0];
