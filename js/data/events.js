@@ -9,6 +9,7 @@ export class EventMessage {
  * Background requests
  */
 export const notifyBackgroundCurrentGroupUpdated = "notifyBackgroundCurrentGroupUpdated";
+export const notifyBackgroundUpdateBackup = "notifyBackgroundUpdateBackup";
 
 /**
  * Sidebar requests

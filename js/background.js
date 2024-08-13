@@ -4,13 +4,19 @@ import {
     deleteActiveGroup,
     deleteGroupToEdit,
     getAllGroups,
-    saveActiveGroup, saveWindowId
+    saveActiveGroup, saveWindowId, getEnableBackup, getBackupMinutes, getLastBackupTime, saveLastBackupTime
 } from "./data/dataStorage.js";
 
-import {notify, notifyBackgroundCurrentGroupUpdated, notifySidebarReloadGroups} from "./data/events.js"
+import {
+    notify,
+    notifyBackgroundCurrentGroupUpdated,
+    notifyBackgroundUpdateBackup,
+    notifySidebarReloadGroups
+} from "./data/events.js"
 import {getLatestWindow, openTabs} from "./data/utils.js";
 
 let activeGroup;
+let backupInterval = null;
 
 //clear temp data and open tabs of first group
 await init();
@@ -32,6 +38,8 @@ async function init() {
         notify(notifySidebarReloadGroups, false);
         console.log("Initialized current group", activeGroup);
     }
+
+    await initBackupInterval();
 }
 
 browser.runtime.onInstalled.addListener(() => {
@@ -39,11 +47,14 @@ browser.runtime.onInstalled.addListener(() => {
 });
 
 //save currentGroup to temp variable on update
-browser.runtime.onMessage.addListener( (message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
     if (message.command === notifyBackgroundCurrentGroupUpdated) {
         activeGroup = message.data;
-
         console.log("Current group received:", activeGroup);
+
+    }
+    if (message.command === notifyBackgroundUpdateBackup) {
+        await initBackupInterval();
     }
 });
 
@@ -94,3 +105,62 @@ async function save() {
 browser.contextMenus.onHidden.addListener(() => {
     browser.contextMenus.removeAll();
 });
+
+//set schedule task to backup
+async function initBackupInterval() {
+    const enableBackup = await getEnableBackup();
+    const backupMinutes = await getBackupMinutes();
+
+    if (!enableBackup && backupInterval) {
+        clearInterval(backupInterval);
+        console.log("Backup turned off");
+    } else if (enableBackup && backupMinutes && backupMinutes > 0) {
+        console.log(`Starting backup every ${backupMinutes} minutes`)
+
+        if (backupInterval) {
+            clearInterval(backupInterval)
+        }
+        backupInterval = setInterval(backupGroups, backupMinutes * 60 * 1000)
+        await backupGroups();
+    }
+}
+
+async function backupGroups() {
+    const lastBackupTime = await getLastBackupTime();
+    const now = new Date().getTime();
+
+    if (!lastBackupTime) {
+        await backup();
+        return;
+    }
+
+    const diff = (now - lastBackupTime) / 1000 / 60
+    const backupMinutes = await getBackupMinutes();
+
+    if (diff >= backupMinutes || backupMinutes - diff < 0.1) {
+        await backup();
+    }
+}
+
+//save to Downloads
+async function backup() {
+    const allGroups = await getAllGroups();
+    const blob = new Blob([JSON.stringify(allGroups)], {type: 'text/plain'});
+
+    const url = URL.createObjectURL(blob);
+    const now = new Date().getTime();
+
+    const name = `SidebarTabGroups/${now}.json`
+
+    // Use the downloads API to create the file in the Downloads folder
+    browser.downloads.download({
+        url: url,
+        filename: name,
+        saveAs: false  // Ask where to save the file
+    }).then(async (downloadId) => {
+        console.log(`Saved new backup: ${name}`);
+        await saveLastBackupTime(now);
+    }).catch((error) => {
+        console.error(`Error on backup: ${error}`);
+    });
+}
