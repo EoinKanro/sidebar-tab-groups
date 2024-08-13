@@ -2,39 +2,6 @@ export const tabGroupsName = "tab-groups";
 
 let db;
 
-async function getDatabase() {
-    if (db) {
-        return db;
-    }
-
-    return new Promise((resolve, reject) => {
-        //Open database
-        const request = indexedDB.open("SidebarTabGroups", 1);
-
-        //Update if necessary
-        request.onupgradeneeded = function (event) {
-            const db = event.target.result;
-
-            if (event.oldVersion < 1) {
-                //create store for tab-groups and temp
-                const tabsStore = db.createObjectStore(tabGroupsName, {keyPath: "id"});
-                tabsStore.createIndex("id", "id", {unique: true});
-            }
-        };
-
-        request.onsuccess = function (event) {
-            db = event.target.result;
-            console.log("Database initialized successfully");
-            resolve(db);
-        };
-
-        request.onerror = function (event) {
-            console.error("Database error:", event.target.errorCode);
-            reject(event.target.errorCode);
-        };
-    });
-}
-
 /**
  * @returns {Promise<unknown>} array/null
  */
@@ -142,5 +109,38 @@ export function deleteData(storeName, key) {
         } catch (e) {
             resolve(false);
         }
+    });
+}
+
+async function getDatabase() {
+    if (db) {
+        return db;
+    }
+
+    return new Promise((resolve, reject) => {
+        //Open database
+        const request = indexedDB.open("SidebarTabGroups", 1);
+
+        //Update if necessary
+        request.onupgradeneeded = function (event) {
+            const db = event.target.result;
+
+            if (event.oldVersion < 1) {
+                //create store for tab-groups and temp
+                const tabsStore = db.createObjectStore(tabGroupsName, {keyPath: "id"});
+                tabsStore.createIndex("id", "id", {unique: true});
+            }
+        };
+
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            console.log("Database initialized successfully");
+            resolve(db);
+        };
+
+        request.onerror = function (event) {
+            console.error("Database error:", event.target.errorCode);
+            reject(event.target.errorCode);
+        };
     });
 }
