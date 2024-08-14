@@ -1,4 +1,11 @@
-import {getGroup, deleteGroupToEdit, getAllGroups, saveGroupToEdit, getActiveGroup} from "./data/dataStorage.js";
+import {
+    getGroup,
+    deleteGroupToEdit,
+    getAllGroups,
+    saveGroupToEdit,
+    getActiveGroup,
+    saveWindowId
+} from "./data/dataStorage.js";
 import {
     notify,
     notifyEditGroupReloadGroup,
@@ -99,6 +106,9 @@ async function createButton(group, selected) {
         if (activeGroup && activeGroup.id === group.id) {
             return;
         }
+
+        //save current window id to open all tabs here
+        await saveWindowId((await getLatestWindow()).id)
 
         //remove style selected from all buttons
         for (let child of tabButtons.children) {
