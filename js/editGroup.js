@@ -49,7 +49,6 @@ browser.theme.getCurrent().then(theme => {
         
         .button-class:hover {
             background-color: ${colors.button_active} !important;
-            transition: 0.6s;
         }
         
         #icon-selected {
