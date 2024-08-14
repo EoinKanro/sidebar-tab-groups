@@ -20,7 +20,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "sidebar-tab-groups"
+      "id": "SidebarTabGroups"
     }
   },
   "background": {
