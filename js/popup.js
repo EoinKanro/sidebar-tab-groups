@@ -1,34 +1,17 @@
-import {notify, notifyBackgroundUpdateBackup} from "./data/events.js";
-import {getBackupMinutes, getEnableBackup, saveBackupMinutes, saveEnableBackup} from "./data/dataStorage.js";
+import {getLatestWindow} from "./data/utils.js";
 
-const backupCheckbox = document.getElementById('backup-checkbox');
-const backupTime = document.getElementById('backup-time');
+const settingsButton = document.getElementById("settings-button");
 
-let isBackup = await getEnableBackup();
-let backupMinutes = await getBackupMinutes();
+settingsButton.addEventListener("click", async () => {
+    const activeWindow = await getLatestWindow();
+    // console.log(activeWindow)
+    const viewportWidth = Math.round(activeWindow.width * 0.6);
+    const viewportHeight = Math.round(activeWindow.height * 0.5);
 
-backupCheckbox.checked = isBackup;
-if (backupMinutes) {
-    backupTime.value = backupMinutes;
-}
-
-//if changed checkbox
-backupCheckbox.addEventListener('click', async () => {
-    await saveEnableBackup(backupCheckbox.checked);
-});
-
-//Restrict non digits
-backupTime.addEventListener('input', (event) => {
-    const value = event.target.value;
-    event.target.value = value.replace(/[^0-9]/g, '');
-});
-
-//Save on update
-backupTime.addEventListener('input', async () => {
-    await saveBackupMinutes(backupTime.value)
-});
-
-//Update on close
-window.addEventListener('unload', () => {
-    notify(notifyBackgroundUpdateBackup, null);
-});
+    browser.windows.create({
+        url: browser.runtime.getURL("../html/settings.html"),
+        type: "popup",
+        width: viewportWidth,
+        height: viewportHeight
+    })
+})
