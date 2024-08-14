@@ -28,8 +28,15 @@
     "default_title": "Sidebar Tab Groups"
   },
   "web_accessible_resources": [
-    "js/tabsGroup.js",
+    "js/editGroup.js",
+    "js/popup.js",
+    "js/settings.js",
+    "js/sidebar.js",
+    "js/data/database.js",
+    "js/data/dataStorage.js",
+    "js/data/events.js",
+    "js/data/utils.js",
     "html/editGroup.html",
-    "js/editGroup.js"
+    "html/settings.html"
   ]
 }
