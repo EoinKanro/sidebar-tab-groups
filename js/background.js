@@ -4,7 +4,7 @@ import {
     deleteActiveGroup,
     deleteGroupToEdit,
     getAllGroups,
-    saveActiveGroup, saveWindowId, getEnableBackup, getBackupMinutes, getLastBackupTime, saveLastBackupTime
+    saveActiveGroup, saveWindowId, getEnableBackup, getBackupMinutes, getLastBackupTime
 } from "./data/dataStorage.js";
 
 import {
@@ -13,7 +13,7 @@ import {
     notifyBackgroundUpdateBackup,
     notifySidebarReloadGroups
 } from "./data/events.js"
-import {getLatestWindow, openTabs} from "./data/utils.js";
+import {backupGroups, getLatestWindow, openTabs} from "./data/utils.js";
 
 let activeGroup;
 let backupInterval = null;
@@ -120,17 +120,17 @@ async function initBackupInterval() {
         if (backupInterval) {
             clearInterval(backupInterval);
         }
-        backupInterval = setInterval(backupGroups, backupMinutes * 60 * 1000);
-        await backupGroups();
+        backupInterval = setInterval(backupGroupsWithCheck, backupMinutes * 60 * 1000);
+        await backupGroupsWithCheck();
     }
 }
 
-async function backupGroups() {
+export async function backupGroupsWithCheck() {
     const lastBackupTime = await getLastBackupTime();
     const now = new Date().getTime();
 
     if (!lastBackupTime) {
-        await backup();
+        await backupGroups();
         return;
     }
 
@@ -138,29 +138,6 @@ async function backupGroups() {
     const backupMinutes = await getBackupMinutes();
 
     if (diff >= backupMinutes || backupMinutes - diff < 0.1) {
-        await backup();
+        await backupGroups();
     }
-}
-
-//save to Downloads
-async function backup() {
-    const allGroups = await getAllGroups();
-    const blob = new Blob([JSON.stringify(allGroups)], {type: 'text/plain'});
-
-    const url = URL.createObjectURL(blob);
-    const now = new Date().getTime();
-
-    const name = `SidebarTabGroups/${now}.json`;
-
-    // Use the downloads API to create the file in the Downloads folder
-    browser.downloads.download({
-        url: url,
-        filename: name,
-        saveAs: false  // Ask where to save the file
-    }).then(async (downloadId) => {
-        console.log(`Saved new backup: ${name}`);
-        await saveLastBackupTime(now);
-    }).catch((error) => {
-        console.error(`Error on backup: ${error}`);
-    });
 }
