@@ -1,9 +1,11 @@
 import {
-    deleteActiveGroup, getAllGroups,
-    getAllOpenedTabs, getBackupMinutes,
-    getLastBackupTime,
+    deleteActiveGroup,
+    getAllGroups,
+    getAllOpenedTabs,
+    getWindowId,
     saveActiveGroup,
-    saveGroup, saveLastBackupTime,
+    saveGroup,
+    saveLastBackupTime,
     Tab
 } from "./dataStorage.js";
 
@@ -25,7 +27,7 @@ export async function openTabs(group, notifyBackground) {
     console.log("Opening tabs", group)
     //delete to prevent updating group in background
     await deleteActiveGroup(notifyBackground);
-    const windowId = (await getLatestWindow()).id;
+    const windowId = await getWindowId();
 
     group.windowId = windowId;
 
