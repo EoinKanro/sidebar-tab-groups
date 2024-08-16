@@ -17,6 +17,8 @@ hr {
     border: none;
     text-align: center;
     cursor: pointer;
+    padding-top: 5px;
+    padding-bottom: 5px;
 }
 
 .button-class:hover {
