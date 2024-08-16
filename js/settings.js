@@ -1,8 +1,8 @@
 import {
     deleteActiveGroup, deleteAllGroups,
-    getBackupMinutes,
+    getBackupMinutes, getDontCloseTabs,
     getEnableBackup,
-    saveBackupMinutes,
+    saveBackupMinutes, saveDontCloseTabs,
     saveEnableBackup, saveGroup
 } from "./data/dataStorage.js";
 import {notify, notifyBackgroundReloadAllGroups, notifyBackgroundUpdateBackup} from "./data/events.js";
@@ -51,15 +51,19 @@ const backupTime = document.getElementById('backup-time');
 const saveBackupButton = document.getElementById('save-backup-button');
 const restoreText = document.getElementById('restore-text');
 const restoreButton = document.getElementById('restore-button');
+const dontCloseTabsCheckbox = document.getElementById('close-tabs-checkbox');
+const saveTabsButton = document.getElementById('save-tabs-button');
 
 
-let isBackup = await getEnableBackup();
-let backupMinutes = await getBackupMinutes();
+const isBackup = await getEnableBackup();
+const backupMinutes = await getBackupMinutes();
+const isDontCloseTabs = await getDontCloseTabs()
 
 backupCheckbox.checked = isBackup;
 if (backupMinutes) {
     backupTime.value = backupMinutes;
 }
+dontCloseTabsCheckbox.checked = isDontCloseTabs;
 
 //Restrict non digits
 backupTime.addEventListener('input', (event) => {
@@ -118,3 +122,8 @@ restoreButton.addEventListener('click', async (event) => {
     notify(notifyBackgroundReloadAllGroups, null);
     alert("Restoration is complete. If something is wrong you can find a backup right before the restoration in Downloads");
 })
+
+saveTabsButton.addEventListener('click', async (event) => {
+    await saveDontCloseTabs(dontCloseTabsCheckbox.checked);
+    alert("Tabs settings are updated");
+});

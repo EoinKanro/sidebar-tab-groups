@@ -9,8 +9,9 @@
 <h3>Settings</h3>
 
 <h4>Backup Tab Groups</h4>
-<label for="backup-checkbox">Enable backup to Downloads</label>
-<input type="checkbox" id="backup-checkbox"><br>
+
+<input type="checkbox" id="backup-checkbox">
+<label for="backup-checkbox">Enable backup to Downloads</label><br>
 
 <label for="backup-time">Every min</label>
 <input type="number" id="backup-time"><br>
@@ -22,6 +23,12 @@
 <input type="text" id="restore-text"><br>
 
 <button id="restore-button" class="button-class">Restore</button>
+
+<h4>Tabs</h4>
+<input type="checkbox" id="close-tabs-checkbox">
+<label for="close-tabs-checkbox">Don't close tabs on change group</label><br>
+<button id="save-tabs-button" class="button-class">Save</button>
+
 <script type="module" src="../js/settings.js"></script>
 </body>
 </html>
