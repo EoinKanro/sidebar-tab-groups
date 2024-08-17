@@ -2,7 +2,7 @@ import {
     deleteActiveGroup,
     getAllGroups,
     getAllOpenedTabs,
-    getDontCloseTabs,
+    getIfCloseTabs,
     getWindowId,
     saveActiveGroup,
     saveGroup,
@@ -77,13 +77,13 @@ export async function openTabs(group, notifyBackground) {
     }
 
     //close or hide old tabs
-    const dontCloseTabs = await getDontCloseTabs();
+    const closeTabs = await getIfCloseTabs();
     const openedIds = openedTabs.map(tab => tab.id);
     const idsToCloseOrHide = allTabs
         .filter(tab => !openedIds.includes(tab.id))
         .map(tab => tab.id);
 
-    if (dontCloseTabs) {
+    if (!closeTabs) {
         //show openedTabs, sort them, then hide tabs not from current group
         await browser.tabs.show(openedIds);
         await browser.tabs.update(openedIds[openedIds.length - 1], { active: true });
