@@ -14,10 +14,10 @@ you need:
 
 ### Create userChrome.css
 
-- Open about:support
-- Open profile folder
-- Create chrome folder
-- Create userChrome.css inside it
+- Open `about:support` in Firefox
+- Open `profile` folder
+- Create `chrome` folder
+- Create `userChrome.css` inside it
 - Put the code inside the file:
 
 ```
@@ -40,7 +40,7 @@ you need:
 
 ### Turn the style on
 
-- Open about:config
-- Type userprof in the search bar
-- Double-click on toolkit.legacyUserProfileCustomizations.stylesheets to switch it on
+- Open `about:config` in Firefox
+- Type `userprof` in the search bar
+- Double-click on `toolkit.legacyUserProfileCustomizations.stylesheets` to switch it on
 - Restart Firefox
