@@ -17,6 +17,7 @@ export const notifyBackgroundReloadAllGroups = "notifyBackgroundReloadAllGroups"
  */
 export const notifySidebarReloadGroups = "notifySidebarReloadGroups";
 export const notifySidebarEditGroupIsClosed = "notifySidebarEditGroupIsClosed";
+export const notifySidebarUpdateButtonsPadding = "notifySidebarUpdateButtonsPadding";
 
 /**
  * Edit group requests

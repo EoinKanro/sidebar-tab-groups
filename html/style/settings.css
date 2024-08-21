@@ -1,3 +1,9 @@
+.content input,
+.content label,
+.content button {
+    margin-bottom: 0.7em;
+}
+
 .button-class {
     border: none;
     text-align: center;
