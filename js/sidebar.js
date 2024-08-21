@@ -202,34 +202,37 @@ async function reloadButtonsPadding() {
 }
 
 function loadTheme(theme) {
+    console.log(theme);
+
+
     let colors
     if (theme?.colors) {
         colors = theme.colors;
     } else {
         colors = {};
 
-        colors.toolbar_field = "rgb(240, 240, 244)"
-        colors.toolbar_field_text = "rgb(21, 20, 26)"
-        colors.toolbar_field_focus = "white"
+        colors.frame = "rgb(240, 240, 244)"
+        colors.tab_background_text = "rgb(21, 20, 26)"
+        colors.toolbar = "white"
     }
 
     styleTheme.innerHTML =
         `
         body {
-            background-color: ${colors.toolbar_field};
+            background-color: ${colors.frame} !important;
         }
         
         .button-class {
-            background-color: ${colors.toolbar_field};
-            color: ${colors.toolbar_field_text};
+            background-color: ${colors.frame} !important;
+            color: ${colors.tab_background_text} !important;
         }
         
         .button-class:hover {
-            background-color: ${colors.toolbar_field_focus} !important;
+            background-color: ${colors.toolbar} !important;
         }
         
         .selected {
-            background-color: ${colors.toolbar_field_focus} !important;
+            background-color: ${colors.toolbar} !important;
         }
         `;
 }

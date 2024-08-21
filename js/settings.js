@@ -28,8 +28,8 @@ browser.theme.getCurrent().then(theme => {
         colors = {};
         colors.popup = "#fff";
         colors.popup_text = "rgb(21,20,26)";
-        colors.button = "rgba(207,207,216,.33)";
-        colors.button_active = "rgb(207,207,216)";
+        colors.toolbar = "rgba(207,207,216,.33)";
+        colors.toolbar_text = "rgb(21,20,26)";
     }
 
     style.innerHTML =
@@ -40,12 +40,8 @@ browser.theme.getCurrent().then(theme => {
         }
         
         .button-class {
-            background-color: ${colors.button};
-            color: ${colors.popup_text};
-        }
-        
-        .button-class:hover {
-            background-color: ${colors.button_active} !important;
+            background-color: ${colors.toolbar};
+            color: ${colors.toolbar_text};
         }
         
         `;
