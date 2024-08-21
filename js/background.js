@@ -91,6 +91,22 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
 });
 
+//save moved tab
+browser.tabs.onMoved.addListener(async (tabId, changeInfo) => {
+    if (isAvailableToUpdate(changeInfo.windowId) && activeGroup.tabs.filter(tabF => tabF.id === tabId).length > 0) {
+        const fromIndex = changeInfo.fromIndex;
+        const toIndex = changeInfo.toIndex;
+
+        const tabs = activeGroup.tabs;
+        const tab = tabs.splice(fromIndex, 1)[0];
+
+        tabs.splice(toIndex, 0, tab);
+
+        activeGroup.tabs = tabs;
+        await save();
+    }
+})
+
 //remove tab from current group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     if (!removeInfo.isWindowClosing && isAvailableToUpdate(removeInfo.windowId)) {
