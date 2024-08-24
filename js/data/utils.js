@@ -46,32 +46,32 @@ export async function openTabs(group, notifyBackground) {
             //create new one if can't find
             if (!browserTab) {
                 if (url.startsWith("http")) {
-                    browserTab = await browser.tabs.create({
-                        url: tab.url,
+                    browserTab = await (browser.tabs.create({
+                        url: url,
                         windowId: windowId
-                    });
+                    }));
                 } else {
-                    browserTab = await browser.tabs.create({
-                        url: browser.runtime.getURL(url),
+                    browserTab = await (browser.tabs.create({
+                        url: await (browser.runtime.getURL(url)),
                         windowId: windowId
-                    });
+                    }));
                 }
             }
 
             tab.id = browserTab.id;
             openedTabs.push(tab);
         } catch (e) {
-            console.error(`Can't open tab: ${tab.url}`);
+            console.error(`Can't open tab: ${tab}`, e);
         }
     }
 
     //create empty tab in empty group
     if (openedTabs.length <= 0) {
         const tab = new Tab(0, "about:blank");
-        const createdTab = await browser.tabs.create({
+        const createdTab = await (browser.tabs.create({
             url: tab.url,
             windowId: windowId
-        });
+        }));
         tab.id = createdTab.id;
         openedTabs.push(tab);
     }
