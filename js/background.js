@@ -1,72 +1,167 @@
 import {
-    Tab,
-    saveGroup,
-    deleteActiveGroup,
-    deleteGroupToEdit,
-    getAllGroups,
-    saveWindowId, getEnableBackup, getBackupMinutes, getLastBackupTime, getWindowId, getActiveGroup
-} from "./data/dataStorage.js";
-
-import {
+    backgroundId,
+    EditGroupActiveGroupChangedEvent,
     notify,
-    notifyBackgroundCurrentGroupUpdated,
-    notifyBackgroundReloadAllGroups,
-    notifyBackgroundUpdateBackup,
-    notifySidebarReloadGroups
-} from "./data/events.js"
-import {backupGroups, getLatestWindow, openTabs} from "./data/utils.js";
+    notifyBackgroundActiveGroupDeleted,
+    notifyBackgroundActiveGroupUpdated,
+    notifyBackgroundOpenFirstGroupTabs,
+    notifyBackgroundReinitBackup,
+    notifyBackgroundOpenTabs,
+    SidebarUpdateActiveGroupButtonEvent, notifyBackgroundRestoreBackup, SidebarReloadGroupButtonsEvent
+} from "./service/events.js";
+import {
+    deleteActiveGroupId, deleteActiveWindowId, deleteGroupToEditId,
+    getBackupMinutes,
+    getEnableBackup,
+    getLastBackupTime,
+    saveActiveGroupId,
+    saveActiveWindowId
+} from "./data/localStorage.js";
+import {Tab} from "./data/tabs.js";
+import {deleteAllGroups, getAllGroups, saveGroup} from "./data/databaseStorage.js";
+import {backupGroups, getLatestWindow, openTabs} from "./service/utils.js";
+
+/**
+ * Responsible for:
+ * - any tabs manipulations. active group saves only here
+ * - backup
+ * - removing context elements
+ */
 
 let activeGroup;
-let backupInterval = null;
+let backupInterval;
 
+//---------------------------- Init ---------------------------
+await cleanTempData();
+await saveActiveWindowId((await getLatestWindow()).id);
+await openFirstGroup();
+await cleanInitBackupInterval();
 
-//clear temp data and open tabs of first group
-await init();
-async function init() {
-    //clear temp data
-    await deleteActiveGroup(false);
-    await deleteGroupToEdit();
-    const windowId = (await getLatestWindow()).id
-    await saveWindowId(windowId);
-
-    await reloadAllGroups();
-    await initBackupInterval();
+async function cleanTempData() {
+    await deleteActiveGroupId();
+    await deleteActiveWindowId();
+    await deleteGroupToEditId();
 }
 
-async function reloadAllGroups() {
-    const allGroups = await getAllGroups();
-    //open first group on load addon
-    if (allGroups && allGroups.length > 0) {
-        const active = allGroups[0];
+//------------------------- Runtime messages listener --------------------------------
 
-        active.windowId = await getWindowId();
-        await openTabs(active, false);
-        notify(notifySidebarReloadGroups, false);
-
-        activeGroup = await getActiveGroup();
-        console.log("Initialized current group", activeGroup);
-    }
-}
-
-browser.runtime.onInstalled.addListener(() => {
-    console.log("Tab Manager Extension Installed");
-});
-
-//save currentGroup to temp variable on update
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    if (message.command === notifyBackgroundCurrentGroupUpdated) {
-        activeGroup = message.data;
-        console.log("Current group received:", activeGroup);
-
-    } else if (message.command === notifyBackgroundUpdateBackup) {
-        await initBackupInterval();
-
-    } else if (message.command === notifyBackgroundReloadAllGroups) {
-        await reloadAllGroups();
+    if (!message.target.includes(backgroundId)) {
+        return;
     }
-});
 
-//save tab to current group when opened
+    if (message.actionId === notifyBackgroundOpenTabs) {
+        await processOpenTabs(message.groupId);
+    } else if (message.actionId === notifyBackgroundOpenFirstGroupTabs) {
+        await openFirstGroup();
+    } else if (message.actionId === notifyBackgroundActiveGroupUpdated) {
+        await processUpdateActiveGroup(message.group);
+    } else if (message.actionId === notifyBackgroundActiveGroupDeleted) {
+        activeGroup = null;
+    } else if (message.actionId === notifyBackgroundReinitBackup) {
+        await cleanInitBackupInterval();
+    } else if (message.actionId === notifyBackgroundRestoreBackup) {
+        await processRestoreBackup(message.json);
+    }
+})
+
+async function processOpenTabs(groupId) {
+    const previousActiveGroup = activeGroup;
+
+    activeGroup = null;
+    activeGroup = await openTabs(groupId);
+
+    if (!activeGroup) {
+        activeGroup = previousActiveGroup;
+    }
+
+    if (activeGroup) {
+        await saveActiveGroupId(activeGroup.id);
+    }
+    notify(new EditGroupActiveGroupChangedEvent());
+    notify(new SidebarReloadGroupButtonsEvent());
+}
+
+async function openFirstGroup() {
+    const allGroups = await getAllGroups();
+    if (allGroups && allGroups.length > 0) {
+        const firstGroup = allGroups[0];
+        await processOpenTabs(firstGroup.id);
+    } else {
+        await saveActiveGroupId(null);
+        notify(new EditGroupActiveGroupChangedEvent());
+        notify(new SidebarReloadGroupButtonsEvent());
+    }
+}
+
+async function processUpdateActiveGroup(group) {
+    if (activeGroup) {
+        activeGroup.name = group.name;
+        activeGroup.icon = group.icon;
+        await save();
+    } else {
+        activeGroup = group;
+        await saveActiveGroupId(group.id);
+        notify(new SidebarUpdateActiveGroupButtonEvent());
+    }
+}
+
+//set schedule backup task
+async function cleanInitBackupInterval() {
+    const enableBackup = await getEnableBackup();
+    const backupMinutes = await getBackupMinutes();
+
+    if (backupInterval) {
+        clearInterval(backupInterval);
+    }
+
+    if (!enableBackup) {
+        console.log("Backup turned off");
+        return
+    }
+
+    if (backupMinutes) {
+        console.log(`Starting backup every ${backupMinutes} minutes`);
+        backupInterval = setInterval(backupGroupsWithCheck, backupMinutes * 60 * 1000);
+        await backupGroupsWithCheck();
+    } else {
+        console.log("Can't start backup with empty minutes");
+    }
+}
+
+async function backupGroupsWithCheck() {
+    const lastBackupTime = await getLastBackupTime();
+    const now = new Date().getTime();
+
+    if (!lastBackupTime) {
+        await backupGroups();
+        return;
+    }
+
+    const diff = (now - lastBackupTime) / 1000 / 60;
+    const backupMinutes = await getBackupMinutes();
+
+    if (diff >= backupMinutes || backupMinutes - diff < 0.1) {
+        await backupGroups();
+    }
+}
+
+async function processRestoreBackup(json) {
+    await backupGroups();
+
+    await deleteAllGroups()
+    await cleanTempData();
+
+    for (const item of json) {
+        await saveGroup(item);
+    }
+
+    await openFirstGroup();
+}
+
+//----------------------- Tabs CUD listeners ------------------------
+
+//save tab to active group when opened
 browser.tabs.onCreated.addListener(async (tab) => {
     if (isAvailableToUpdate(tab.windowId)) {
         console.log(`Saving new tab to current group: `, activeGroup)
@@ -107,7 +202,7 @@ browser.tabs.onMoved.addListener(async (tabId, changeInfo) => {
     }
 })
 
-//remove tab from current group when closed
+//remove tab from active group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     if (!removeInfo.isWindowClosing && isAvailableToUpdate(removeInfo.windowId)) {
         console.log(`Deleting tab from current group: `, tabId, activeGroup)
@@ -125,43 +220,9 @@ async function save() {
     await saveGroup(activeGroup)
 }
 
+//-------------------------- Listener for removing context menu items -----------------------
+
 //remove custom context menu items
 browser.contextMenus.onHidden.addListener(() => {
     browser.contextMenus.removeAll();
 });
-
-//set schedule task to backup
-async function initBackupInterval() {
-    const enableBackup = await getEnableBackup();
-    const backupMinutes = await getBackupMinutes();
-
-    if (!enableBackup && backupInterval) {
-        clearInterval(backupInterval);
-        console.log("Backup turned off");
-    } else if (enableBackup && backupMinutes && backupMinutes > 0) {
-        console.log(`Starting backup every ${backupMinutes} minutes`);
-
-        if (backupInterval) {
-            clearInterval(backupInterval);
-        }
-        backupInterval = setInterval(backupGroupsWithCheck, backupMinutes * 60 * 1000);
-        await backupGroupsWithCheck();
-    }
-}
-
-export async function backupGroupsWithCheck() {
-    const lastBackupTime = await getLastBackupTime();
-    const now = new Date().getTime();
-
-    if (!lastBackupTime) {
-        await backupGroups();
-        return;
-    }
-
-    const diff = (now - lastBackupTime) / 1000 / 60;
-    const backupMinutes = await getBackupMinutes();
-
-    if (diff >= backupMinutes || backupMinutes - diff < 0.1) {
-        await backupGroups();
-    }
-}
