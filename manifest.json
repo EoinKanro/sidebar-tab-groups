@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Sidebar Tab Groups",
-  "version": "0.9",
+  "version": "0.10",
   "description": "A custom tab management extension in the sidebar",
   "permissions": ["tabs", "tabHide", "storage", "contextMenus", "downloads"],
   "icons": {
@@ -39,9 +39,11 @@
     "js/settings.js",
     "js/sidebar.js",
     "js/data/database.js",
-    "js/data/dataStorage.js",
-    "js/data/events.js",
-    "js/data/utils.js",
+    "js/data/databaseStorage.js",
+    "js/data/localStorage.js",
+    "js/service/events.js",
+    "js/service/styleUtils.js",
+    "js/service/utils.js",
     "html/editGroup.html",
     "html/settings.html"
   ]
