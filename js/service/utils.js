@@ -1,6 +1,11 @@
 
 // Open the tabs of selected group
-import {getActiveWindowId, getCloseTabsOnChangeGroup, saveLastBackupTime} from "../data/localStorage.js";
+import {
+    getActiveWindowId,
+    getCloseTabsOnChangeGroup,
+    getStopTabsActivityOnChangeGroup,
+    saveLastBackupTime
+} from "../data/localStorage.js";
 import {getAllGroups, getGroup, saveGroup} from "../data/databaseStorage.js";
 import {Tab} from "../data/tabs.js";
 
@@ -83,6 +88,7 @@ export async function openTabs(groupId) {
 
     //close or hide old tabs
     const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
+    const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
     const openedIds = openedTabs.map(tab => tab.id);
     const idsToCloseOrHide = allTabs
         .filter(tab => !openedIds.includes(tab.id))
@@ -101,6 +107,9 @@ export async function openTabs(groupId) {
         //hide
         for (const tabId of idsToCloseOrHide) {
             try {
+                if (stopTabsActivityOnChangeGroup) {
+                    await browser.tabs.discard(tabId);
+                }
                 await browser.tabs.hide(tabId);
             } catch (e) {
                 console.log(`Can't hide tab: ${tabId}`, e);

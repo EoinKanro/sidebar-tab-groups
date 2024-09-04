@@ -7,6 +7,7 @@ const backupMinutesName = "backupMinutes";
 const lastBackupTimeName = "lastBackupTime";
 const sidebarButtonsPaddingPxName = "sidebarButtonsPaddingPx";
 const closeTabsOnChangeGroupName = "closeTabsOnChangeGroup";
+const stopTabsActivityOnChangeGroupName = "stopTabsActivityOnChangeGroup";
 
 //-------------------- Temp data --------------------
 //------------------- Active group ------------------
@@ -92,6 +93,14 @@ export async function getCloseTabsOnChangeGroup() {
 
 export async function saveCloseTabsOnChangeGroup(bool) {
     await saveToLocalStorage(closeTabsOnChangeGroupName, bool);
+}
+
+export async function getStopTabsActivityOnChangeGroup() {
+    return await getFromLocalStorage(stopTabsActivityOnChangeGroupName);
+}
+
+export async function saveStopTabsActivityOnChangeGroup(bool) {
+    await saveToLocalStorage(stopTabsActivityOnChangeGroupName, bool);
 }
 
 async function getFromLocalStorage(key) {
