@@ -37,4 +37,18 @@ hr {
     'opsz' 24
 }
 
+@keyframes shake {
+    0% { transform: rotate(0deg); }
+    14% { transform: rotate(2.5deg); }
+    28% { transform: rotate(5deg); }
+    42% { transform: rotate(2.5deg); }
+    56% { transform: rotate(0deg); }
+    70% { transform: rotate(-2.5deg); }
+    84% { transform: rotate(-5deg); }
+    100% { transform: rotate(-2.5deg); }
+}
 
+.shake {
+    animation: shake 0.6s;
+    animation-iteration-count: infinite;
+}
