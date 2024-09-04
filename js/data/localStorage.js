@@ -65,8 +65,8 @@ export async function getBackupMinutes() {
     return await getFromLocalStorage(backupMinutesName)
 }
 
-export async function saveBackupMinutes(hours) {
-    await saveToLocalStorage(backupMinutesName, hours);
+export async function saveBackupMinutes(minutes) {
+    await saveToLocalStorage(backupMinutesName, minutes);
 }
 
 export async function saveLastBackupTime(time) {
