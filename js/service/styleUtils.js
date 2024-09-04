@@ -82,8 +82,7 @@ export async function updateSidebarButtonsPadding(style) {
         style.innerHTML =
             `
             .button-class {
-                padding-top: ${paddingPx}px !important;
-                padding-bottom: ${paddingPx}px !important;
+                height: ${paddingPx * 2}px !important;
             }
             `
     }
