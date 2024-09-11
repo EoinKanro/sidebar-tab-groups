@@ -6,7 +6,7 @@ import {
     getStopTabsActivityOnChangeGroup,
     saveLastBackupTime
 } from "../data/localStorage.js";
-import {getAllGroups, getGroup, saveGroup} from "../data/databaseStorage.js";
+import {getAllGroups, getGroup} from "../data/databaseStorage.js";
 import {Tab} from "../data/tabs.js";
 
 //------------------- Browser utils -------------------
@@ -48,6 +48,11 @@ export async function openTabs(groupId) {
     const openedTabs = [];
     for (const tab of group.tabs) {
         try {
+            //crunch
+            if (tab === undefined || !tab || tab.url === "about:blank" || tab.url === "about:newtab") {
+                continue;
+            }
+
             const url = tab.url;
 
             //try to find tab with the same url
@@ -128,13 +133,16 @@ export async function openTabs(groupId) {
 
     //update group after possible errors
     group.tabs = openedTabs;
-    await saveGroup(group);
 
     return group;
 }
 
 //find tab in all tabs that doesn't have the id from openedTabs to reuse
 function findTab(allTabs, openedTabs, url) {
+    if (!allTabs || !openedTabs || !url) {
+        return null;
+    }
+
     const browserTabsWithSameUrl = allTabs.filter(tab => tab.url === url);
     if (browserTabsWithSameUrl && browserTabsWithSameUrl.length > 0) {
         return browserTabsWithSameUrl.find(browserTab =>
