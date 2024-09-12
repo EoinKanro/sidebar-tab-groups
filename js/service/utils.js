@@ -33,7 +33,11 @@ export async function getLatestWindow() {
  */
 export async function openTabs(groupId) {
     console.log("Opening tabs...", groupId)
-    const allTabs = await getAllOpenedTabs();
+    let allTabs = await getAllOpenedTabs();
+    if (allTabs === undefined || !allTabs) {
+        allTabs = [];
+    }
+
     const windowId = await getActiveWindowId();
     const group = await getGroup(groupId);
 
@@ -49,7 +53,7 @@ export async function openTabs(groupId) {
     for (const tab of group.tabs) {
         try {
             //crunch
-            if (tab === undefined || !tab || tab.url === "about:blank" || tab.url === "about:newtab") {
+            if (tab === undefined || !tab || isUrlEmpty(tab.url)) {
                 continue;
             }
 
@@ -95,9 +99,8 @@ export async function openTabs(groupId) {
     const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
     const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
     const openedIds = openedTabs.map(tab => tab.id);
-    const idsToCloseOrHide = allTabs
-        .filter(tab => !openedIds.includes(tab.id))
-        .map(tab => tab.id);
+    const tabsToClose = allTabs
+        .filter(tab => !openedIds.includes(tab.id));
 
 
     if (!closeTabsOnChangeGroup) {
@@ -110,23 +113,29 @@ export async function openTabs(groupId) {
             await browser.tabs.move(openedTabs[i].id, { index: i });
         }
         //hide
-        for (const tabId of idsToCloseOrHide) {
+        for (const tab of tabsToClose) {
             try {
-                if (stopTabsActivityOnChangeGroup) {
-                    await browser.tabs.discard(tabId);
+                //close empty tabs
+                if (isUrlEmpty(tab.url)) {
+                    await browser.tabs.remove(tab.id);
+                    continue
                 }
-                await browser.tabs.hide(tabId);
+
+                if (stopTabsActivityOnChangeGroup) {
+                    await browser.tabs.discard(tab.id);
+                }
+                await browser.tabs.hide(tab.id);
             } catch (e) {
-                console.log(`Can't hide tab: ${tabId}`, e);
+                console.log(`Can't hide tab: ${tab.id}`, e);
             }
         }
     } else {
         //close
-        for (const tabId of idsToCloseOrHide) {
+        for (const tab of tabsToClose) {
             try {
-                await browser.tabs.remove(tabId);
+                await browser.tabs.remove(tab.id);
             } catch (e) {
-                console.log(`Can't remove tab: ${tabId}`, e);
+                console.log(`Can't remove tab: ${tab.id}`, e);
             }
         }
     }
@@ -139,10 +148,6 @@ export async function openTabs(groupId) {
 
 //find tab in all tabs that doesn't have the id from openedTabs to reuse
 function findTab(allTabs, openedTabs, url) {
-    if (!allTabs || !openedTabs || !url) {
-        return null;
-    }
-
     const browserTabsWithSameUrl = allTabs.filter(tab => tab.url === url);
     if (browserTabsWithSameUrl && browserTabsWithSameUrl.length > 0) {
         return browserTabsWithSameUrl.find(browserTab =>
@@ -179,4 +184,9 @@ export async function backupGroups() {
     });
 
     return !error;
+}
+
+export function isUrlEmpty(url) {
+    return url === undefined || !url || url.includes("about:blank") || url.includes("about:newtab")
+        || url.includes("about:home")
 }
