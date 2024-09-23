@@ -214,30 +214,40 @@ class BlockingQueue {
     }
 }
 
-class CreateTabAction {
-    constructor(index, id, url) {
+class TabAction {
+    constructor(groupId) {
+        this.groupId = groupId;
+    }
+}
+
+class CreateTabAction extends TabAction{
+    constructor(groupId, index, id, url) {
+        super(groupId);
         this.index = index;
         this.id = id;
         this.url = url;
     }
 }
 
-class UpdateTabAction {
-    constructor(id, url) {
+class UpdateTabAction extends TabAction{
+    constructor(groupId, id, url) {
+        super(groupId);
         this.id = id;
         this.url = url;
     }
 }
 
-class MoveTabAction {
-    constructor(id, toIndex) {
+class MoveTabAction extends TabAction{
+    constructor(groupId, id, toIndex) {
+        super(groupId);
         this.id = id;
         this.toIndex = toIndex;
     }
 }
 
-class RemoveTabAction {
-    constructor(id) {
+class RemoveTabAction extends TabAction{
+    constructor(groupId, id) {
+        super(groupId);
         this.id = id;
     }
 }
@@ -246,6 +256,11 @@ async function processTabsActions() {
     while(true) {
         try {
             const msg = await tabsActionQueue.take();
+
+            if (msg.groupId !== activeGroup.id) {
+                console.log("Message is too old, skipping: ", msg);
+                continue;
+            }
 
             if (msg instanceof CreateTabAction) {
                 await createTab(msg);
@@ -312,29 +327,47 @@ processTabsActions().then(() => console.log("Background tab processing stopped")
 
 //save tab to active group when opened
 browser.tabs.onCreated.addListener(async (tab) => {
-    if (isAvailableToUpdate(tab.windowId)) {
-        tabsActionQueue.add(new CreateTabAction(tab.index, tab.id, tab.url));
+    try {
+        if (tab !== undefined && tab && isAvailableToUpdate(tab.windowId)) {
+            tabsActionQueue.add(new CreateTabAction(activeGroup.id, tab.index, tab.id, tab.url));
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 
 //save tab if it was updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (isAvailableToUpdate(tab.windowId) && !isUrlEmpty(changeInfo.url)) {
-        tabsActionQueue.add(new UpdateTabAction(tab.id, changeInfo.url));
+    try {
+        if (tab !== undefined && tab && isAvailableToUpdate(tab.windowId) && changeInfo !== undefined && changeInfo
+            && !isUrlEmpty(changeInfo.url)) {
+            tabsActionQueue.add(new UpdateTabAction(activeGroup.id, tab.id, changeInfo.url));
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 
 //save moved tab
 browser.tabs.onMoved.addListener(async (tabId, changeInfo) => {
-    if (isAvailableToUpdate(changeInfo.windowId) && activeGroup.tabs.find(tabF => tabF.id === tabId) !== undefined) {
-        tabsActionQueue.add(new MoveTabAction(tabId, changeInfo.toIndex));
+    try {
+        if (changeInfo !== undefined && changeInfo && isAvailableToUpdate(changeInfo.windowId)
+            && activeGroup.tabs.find(tabF => tabF.id === tabId) !== undefined) {
+            tabsActionQueue.add(new MoveTabAction(activeGroup.id, tabId, changeInfo.toIndex));
+        }
+    } catch (e) {
+        console.error(e);
     }
 })
 
 //remove tab from active group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-    if (isAvailableToUpdate(removeInfo.windowId) && !removeInfo.isWindowClosing) {
-        tabsActionQueue.add(new RemoveTabAction(tabId));
+    try {
+        if (removeInfo !== undefined && removeInfo && isAvailableToUpdate(removeInfo.windowId) && !removeInfo.isWindowClosing) {
+            tabsActionQueue.add(new RemoveTabAction(activeGroup.id, tabId));
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 
