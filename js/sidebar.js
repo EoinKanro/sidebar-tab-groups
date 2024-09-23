@@ -53,35 +53,43 @@ browser.theme.onUpdated.addListener(({ theme }) => {
 });
 
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    if (!message.target.includes(sidebarId)) {
-        return;
-    }
+    try {
+        if (!message.target.includes(sidebarId)) {
+            return;
+        }
 
-    if (message.actionId === notifySidebarUpdateActiveGroupButton) {
-        await updateActiveGroupButton();
-    } else if (message.actionId === notifySidebarReloadGroupButtons) {
-        await reloadGroupButtons();
-    } else if (message.actionId === notifySidebarEditGroupClosed) {
-        editGroupOpened = false;
-    } else if (message.actionId === notifySidebarUpdateButtonsPadding) {
-        await loadButtonsPadding();
+        if (message.actionId === notifySidebarUpdateActiveGroupButton) {
+            await updateActiveGroupButton();
+        } else if (message.actionId === notifySidebarReloadGroupButtons) {
+            await reloadGroupButtons();
+        } else if (message.actionId === notifySidebarEditGroupClosed) {
+            editGroupOpened = false;
+        } else if (message.actionId === notifySidebarUpdateButtonsPadding) {
+            await loadButtonsPadding();
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 
 //context menu actions
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId === moveGroupsContextId) {
-        //allow moving buttons
-        movingButtons = true;
-        updateTabGroupsButtonsDraggable(true);
-    } else if (info.menuItemId === stopMoveGroupsContextId) {
-        //stop moving buttons
-        movingButtons = false;
-        updateTabGroupsButtonsDraggable(false);
-    } else if (info.menuItemId.startsWith(editGroupContextMenuIdPattern)) {
-        //open group editor
-        const id = info.menuItemId.replace(editGroupContextMenuIdPattern,"");
-        await openGroupEditor(Number(id));
+    try {
+        if (info.menuItemId === moveGroupsContextId) {
+            //allow moving buttons
+            movingButtons = true;
+            updateTabGroupsButtonsDraggable(true);
+        } else if (info.menuItemId === stopMoveGroupsContextId) {
+            //stop moving buttons
+            movingButtons = false;
+            updateTabGroupsButtonsDraggable(false);
+        } else if (info.menuItemId.startsWith(editGroupContextMenuIdPattern)) {
+            //open group editor
+            const id = info.menuItemId.replace(editGroupContextMenuIdPattern,"");
+            await openGroupEditor(Number(id));
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 

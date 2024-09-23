@@ -58,22 +58,26 @@ async function initDefaultBackupValues() {
 //------------------------- Runtime messages listener --------------------------------
 
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    if (!message.target.includes(backgroundId)) {
-        return;
-    }
+    try {
+        if (!message.target.includes(backgroundId)) {
+            return;
+        }
 
-    if (message.actionId === notifyBackgroundOpenTabs) {
-        await processOpenTabs(message.groupId);
-    } else if (message.actionId === notifyBackgroundOpenFirstGroupTabs) {
-        await openFirstGroup();
-    } else if (message.actionId === notifyBackgroundActiveGroupUpdated) {
-        await processUpdateActiveGroup(message.group);
-    } else if (message.actionId === notifyBackgroundActiveGroupDeleted) {
-        activeGroup = null;
-    } else if (message.actionId === notifyBackgroundReinitBackup) {
-        await cleanInitBackupInterval();
-    } else if (message.actionId === notifyBackgroundRestoreBackup) {
-        await processRestoreBackup(message.json);
+        if (message.actionId === notifyBackgroundOpenTabs) {
+            await processOpenTabs(message.groupId);
+        } else if (message.actionId === notifyBackgroundOpenFirstGroupTabs) {
+            await openFirstGroup();
+        } else if (message.actionId === notifyBackgroundActiveGroupUpdated) {
+            await processUpdateActiveGroup(message.group);
+        } else if (message.actionId === notifyBackgroundActiveGroupDeleted) {
+            activeGroup = null;
+        } else if (message.actionId === notifyBackgroundReinitBackup) {
+            await cleanInitBackupInterval();
+        } else if (message.actionId === notifyBackgroundRestoreBackup) {
+            await processRestoreBackup(message.json);
+        }
+    } catch (e) {
+        console.error(e);
     }
 })
 
@@ -182,52 +186,68 @@ async function processRestoreBackup(json) {
 
 //save tab to active group when opened
 browser.tabs.onCreated.addListener(async (tab) => {
-    if (isAvailableToUpdate(tab.windowId)) {
-        console.log(`Saving new tab to current group: `, tab, activeGroup)
+    try {
+        if (isAvailableToUpdate(tab.windowId)) {
+            console.log(`Saving new tab to current group: `, tab, activeGroup)
 
-        activeGroup.tabs.splice(tab.index, 0, new Tab(tab.id, tab.url))
-        await save()
+            activeGroup.tabs.splice(tab.index, 0, new Tab(tab.id, tab.url))
+            await save()
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 
 //save tab if it was updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (isAvailableToUpdate(tab.windowId) && !isUrlEmpty(changeInfo.url)) {
-        const tabToChange = activeGroup.tabs.filter(tabF => tabF.id === tab.id)[0];
-        if (!tabToChange || tabToChange.url === changeInfo.url) {
-            return
+    try {
+        if (isAvailableToUpdate(tab.windowId) && !isUrlEmpty(changeInfo.url)) {
+            const tabToChange = activeGroup.tabs.filter(tabF => tabF.id === tab.id)[0];
+            if (!tabToChange || tabToChange.url === changeInfo.url) {
+                return
+            }
+
+            console.log(`Updating tab info in current group: `, changeInfo, activeGroup);
+            tabToChange.url = changeInfo.url;
+
+            await save()
         }
-
-        console.log(`Updating tab info in current group: `, changeInfo, activeGroup);
-        tabToChange.url = changeInfo.url;
-
-        await save()
+    } catch (e) {
+        console.error(e);
     }
 });
 
 //save moved tab
 browser.tabs.onMoved.addListener(async (tabId, changeInfo) => {
-    if (isAvailableToUpdate(changeInfo.windowId) && activeGroup.tabs.filter(tabF => tabF.id === tabId).length > 0) {
-        const fromIndex = changeInfo.fromIndex;
-        const toIndex = changeInfo.toIndex;
+    try {
+        if (isAvailableToUpdate(changeInfo.windowId) && activeGroup.tabs.filter(tabF => tabF.id === tabId).length > 0) {
+            const fromIndex = changeInfo.fromIndex;
+            const toIndex = changeInfo.toIndex;
 
-        const tabs = activeGroup.tabs;
-        const tab = tabs.splice(fromIndex, 1)[0];
+            const tabs = activeGroup.tabs;
+            const tab = tabs.splice(fromIndex, 1)[0];
 
-        tabs.splice(toIndex, 0, tab);
+            tabs.splice(toIndex, 0, tab);
 
-        activeGroup.tabs = tabs;
-        await save();
+            activeGroup.tabs = tabs;
+            await save();
+        }
+    } catch (e) {
+        console.error(e);
     }
 })
 
 //remove tab from active group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-    if (!removeInfo.isWindowClosing && isAvailableToUpdate(removeInfo.windowId)) {
-        console.log(`Deleting tab from current group: `, tabId, activeGroup)
+    try {
+        if (!removeInfo.isWindowClosing && isAvailableToUpdate(removeInfo.windowId)) {
+            console.log(`Deleting tab from current group: `, tabId, activeGroup)
 
-        activeGroup.tabs = activeGroup.tabs.filter((tab) => tab.id !== tabId);
-        await save()
+            activeGroup.tabs = activeGroup.tabs.filter((tab) => tab.id !== tabId);
+            await save()
+        }
+    } catch (e) {
+        console.error(e);
     }
 });
 
