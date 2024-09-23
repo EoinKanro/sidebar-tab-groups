@@ -201,5 +201,5 @@ export async function backupGroups() {
 
 export function isUrlEmpty(url) {
     return url === undefined || !url || url.includes("about:blank") || url.includes("about:newtab")
-        || url.includes("about:home")
+        || url.includes("about:home");
 }
