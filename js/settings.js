@@ -80,13 +80,14 @@ restoreButton.onclick = async function () {
         return;
     }
 
-    const brokenText = "The Json is broken. Can't restore";
-    if (!restoreTextData.startsWith("[") || !restoreTextData.endsWith("]")
+    const brokenTextMbOldFormat = "Can't read the Json. Make sure the text has the format: {\"allGroups\":[...],...}"
+    if (!restoreTextData.startsWith("{") || !restoreTextData.endsWith("}")
         || !restoreTextData.includes("tabs") || !restoreTextData.includes("icon")) {
-        alert(brokenText);
+        alert(brokenTextMbOldFormat);
         return;
     }
 
+    const brokenText = "The Json is broken. Can't restore";
     let restoreJson;
     try {
         restoreJson = JSON.parse(restoreTextData);

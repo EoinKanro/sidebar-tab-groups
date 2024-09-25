@@ -1,8 +1,8 @@
 
 // Open the tabs of selected group
 import {
-    getActiveWindowId,
-    getCloseTabsOnChangeGroup,
+    getActiveWindowId, getBackupMinutes,
+    getCloseTabsOnChangeGroup, getEnableBackup, getSidebarButtonsPaddingPx,
     getStopTabsActivityOnChangeGroup,
     saveLastBackupTime
 } from "../data/localStorage.js";
@@ -174,7 +174,22 @@ async function closeTabs(tabsToClose) {
 //save to Downloads
 export async function backupGroups() {
     const allGroups = await getAllGroups();
-    const blob = new Blob([JSON.stringify(allGroups)], {type: 'text/plain'});
+    const enableBackup = await getEnableBackup();
+    const backupMinutes = await getBackupMinutes();
+    const sidebarButtonsPaddingPx = await getSidebarButtonsPaddingPx();
+    const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
+    const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
+
+    const result = {
+        allGroups: allGroups,
+        enableBackup: enableBackup,
+        backupMinutes: backupMinutes,
+        sidebarButtonsPaddingPx: sidebarButtonsPaddingPx,
+        closeTabsOnChangeGroup: closeTabsOnChangeGroup,
+        stopTabsActivityOnChangeGroup: stopTabsActivityOnChangeGroup
+    }
+
+    const blob = new Blob([JSON.stringify(result)], {type: 'text/plain'});
 
     const url = URL.createObjectURL(blob);
     const now = new Date().getTime();
