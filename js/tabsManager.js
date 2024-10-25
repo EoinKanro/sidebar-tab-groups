@@ -39,6 +39,9 @@ async function loadGroups() {
         groupDiv.appendChild(groupHeader);
 
         //links
+        //todo draggable
+        //todo style: size, hover
+        //todo close on right click I think
         const groupTabsDiv = document.createElement("div");
         groupTabsDiv.classList.add('group-tabs-container');
 
@@ -78,4 +81,8 @@ async function loadGroups() {
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
+
+//todo update groups on CRUD of groups in editGroup
+//todo update groups on update active group
+//todo add save button?
 
