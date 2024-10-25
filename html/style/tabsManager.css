@@ -1,0 +1,24 @@
+#groups-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Flexible grid columns */
+    gap: 10px; /* Space between containers */
+    padding: 10px; /* Optional: Adds padding inside the container */
+    width: 100%; /* Ensures it takes up the full width of the viewport */
+    box-sizing: border-box; /* Prevents padding from adding to total width */
+}
+
+.group-container {
+    border: 2px solid #ccc; /* Optional: Adds a border for clarity */
+    padding: 10px; /* Optional: Adds padding inside each group */
+}
+
+.group-tabs-container {
+    max-height: 200px; /* Adjust this to show the number of rows you want */
+    overflow: scroll;
+    padding: 10px; /* Optional: Adds padding inside the container */
+}
+
+.group-tabs-container div {
+    white-space: nowrap; /* Prevents text from wrapping to the next line */
+    align-items: center; /* Vertically centers icon and text */
+}
