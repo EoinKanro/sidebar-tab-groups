@@ -1,7 +1,9 @@
 import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
-import {getAllGroups} from "./data/databaseStorage.js";
+import {getAllGroups, saveGroup} from "./data/databaseStorage.js";
 import {getAllOpenedTabs} from "./service/utils.js";
 import {Tab} from "./data/tabs.js";
+import {BackgroundOpenTabsEvent, notify} from "./service/events.js";
+import {getActiveGroupId} from "./data/localStorage.js";
 
 const contextMenuId = "tabsManagerRemoveTab";
 const groupIdAttributeName = "group-id";
@@ -169,37 +171,49 @@ async function loadGroups() {
 saveButton.onclick = async function (event) {
     let confirmSave = confirm("Save changes?");
 
-    if (confirmSave) {
-        const groups = groupsDiv.children;
-        if (groups.length <= 0) {
-            return;
-        }
-
-        const allGroups = await getAllGroups();
-
-        for (let groupContainer of groups) {
-            const groupTabsContainer = groupContainer.getElementsByClassName(groupTabsContainerClass).item(0);
-
-            const groupId = Number(groupTabsContainer.getAttribute(groupIdAttributeName));
-            const targetGroup = allGroups.find(group => group.id === groupId);
-
-            if (!targetGroup) {
-                console.warn("Can't find group with id " + groupId);
-                continue;
-            }
-
-            const tabs = [];
-            for (let tab of groupTabsContainer.children) {
-                tabs.push(new Tab(0, tab.getAttribute(tabUrlAttributeName)));
-            }
-
-            targetGroup.tabs = tabs;
-        }
-
-        console.log("Result:", allGroups);
-        //notify backgroud reload all
-        //window.close();
+    if (!confirmSave) {
+        return;
     }
+
+    const groups = groupsDiv.children;
+    if (groups.length <= 0) {
+        return;
+    }
+
+    const allGroups = await getAllGroups();
+    if (!allGroups || allGroups.length <= 0) {
+        alert("Nothing to save");
+        window.close();
+        return
+    }
+
+    for (let groupContainer of groups) {
+        const groupTabsContainer = groupContainer.getElementsByClassName(groupTabsContainerClass).item(0);
+
+        const groupId = Number(groupTabsContainer.getAttribute(groupIdAttributeName));
+        const targetGroup = allGroups.find(group => group.id === groupId);
+
+        if (!targetGroup) {
+            console.warn("Can't find group with id " + groupId);
+            continue;
+        }
+
+        const tabs = [];
+        for (let tab of groupTabsContainer.children) {
+            tabs.push(new Tab(0, tab.getAttribute(tabUrlAttributeName)));
+        }
+
+        targetGroup.tabs = tabs;
+    }
+
+    console.log("Result:", allGroups);
+    for (let group of allGroups) {
+        await saveGroup(group);
+    }
+
+    const activeGroupId = await getActiveGroupId();
+    notify(new BackgroundOpenTabsEvent(activeGroupId));
+    window.close();
 }
 
 //-------------------------- Event Listeners ------------------------------
