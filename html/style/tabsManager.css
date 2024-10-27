@@ -34,7 +34,7 @@
     background-color: var(--hover-bg);
 }
 
-.tooltip {
+#tooltip {
     visibility: hidden;
     text-align: right;
     border-radius: 6px;
@@ -45,4 +45,22 @@
     bottom: 10px; /* Distance from the bottom of the viewport */
     right: 10px; /* Distance from the right of the viewport */
     z-index: 1000; /* Ensures it stays on top if needed */
+}
+
+#save-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border: none;
+    font-size: 17px;
+    transition: background-color 0.6s ease;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+    padding: 7px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+#save-button:hover {
+    background-color: var(--hover-bg);
 }

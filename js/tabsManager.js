@@ -1,11 +1,17 @@
 import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 import {getAllGroups} from "./data/databaseStorage.js";
 import {getAllOpenedTabs} from "./service/utils.js";
+import {Tab} from "./data/tabs.js";
 
-const contextMenuId = "tabsManagerRemoveTab"
+const contextMenuId = "tabsManagerRemoveTab";
+const groupIdAttributeName = "group-id";
+const tabUrlAttributeName = "tab-url";
+const groupTabsContainerClass = "group-tabs-container";
 
 const style = getStyle("js-style");
-const groupsDiv = document.getElementById('groups-container')
+const tooltipSpan = document.getElementById('tooltip');
+const groupsDiv = document.getElementById('groups-container');
+const saveButton = document.getElementById('save-button');
 
 let draggedTabDiv;
 let contextTabDiv;
@@ -24,11 +30,6 @@ await loadGroups();
 async function loadGroups() {
     draggedTabDiv = null;
     groupsDiv.innerHTML = '';
-
-    const tooltipSpan = document.createElement("span");
-    tooltipSpan.classList.add("tooltip");
-    tooltipSpan.classList.add("button-class");
-    groupsDiv.appendChild(tooltipSpan);
 
     const allGroups = await getAllGroups();
     const allTabs = await getAllOpenedTabs();
@@ -51,13 +52,14 @@ async function loadGroups() {
 
         //div with all links
         const groupTabsDiv = document.createElement("div");
-        groupTabsDiv.classList.add('group-tabs-container');
-        groupTabsDiv.setAttribute("group-id", group.id);
+        groupTabsDiv.classList.add(groupTabsContainerClass);
+        groupTabsDiv.setAttribute(groupIdAttributeName, group.id);
 
         group.tabs.forEach(tab => {
             const tabDiv = document.createElement("div");
             tabDiv.classList.add("tab-container");
             tabDiv.classList.add("button-class");
+            tabDiv.setAttribute(tabUrlAttributeName, tab.url);
 
             let tabDivText;
 
@@ -115,9 +117,16 @@ async function loadGroups() {
 
                 browser.contextMenus.create({
                     id: contextMenuId,
-                    title: 'Remove tab',
+                    title: 'Remove tab [Shift + Click]',
                     contexts: ["all"]
                 })
+            }
+
+            //delete on shift + click
+            tabDiv.onclick = function (event) {
+                if (event.shiftKey) {
+                    tabDiv.parentElement.removeChild(tabDiv);
+                }
             }
         })
 
@@ -157,6 +166,42 @@ async function loadGroups() {
     })
 }
 
+saveButton.onclick = async function (event) {
+    let confirmSave = confirm("Save changes?");
+
+    if (confirmSave) {
+        const groups = groupsDiv.children;
+        if (groups.length <= 0) {
+            return;
+        }
+
+        const allGroups = await getAllGroups();
+
+        for (let groupContainer of groups) {
+            const groupTabsContainer = groupContainer.getElementsByClassName(groupTabsContainerClass).item(0);
+
+            const groupId = Number(groupTabsContainer.getAttribute(groupIdAttributeName));
+            const targetGroup = allGroups.find(group => group.id === groupId);
+
+            if (!targetGroup) {
+                console.warn("Can't find group with id " + groupId);
+                continue;
+            }
+
+            const tabs = [];
+            for (let tab of groupTabsContainer.children) {
+                tabs.push(new Tab(0, tab.getAttribute(tabUrlAttributeName)));
+            }
+
+            targetGroup.tabs = tabs;
+        }
+
+        console.log("Result:", allGroups);
+        //notify backgroud reload all
+        //window.close();
+    }
+}
+
 //-------------------------- Event Listeners ------------------------------
 
 //update theme on change
@@ -181,5 +226,3 @@ function handleContextMenuClick(info, tab) {
 
 //todo update groups on CRUD of groups in editGroup
 //todo update groups on update active group
-//todo add save button?
-
