@@ -8,8 +8,8 @@
 }
 
 .group-container {
-    border: 2px solid #ccc; /* Optional: Adds a border for clarity */
-    padding: 10px; /* Optional: Adds padding inside each group */
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
 }
 
 .group-tabs-container {
@@ -26,6 +26,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
+    transition: background-color 0.6s ease;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+}
+
+.tab-container:hover {
+    background-color: var(--hover-bg);
 }
 
 .tooltip {

@@ -24,6 +24,7 @@ async function loadGroups() {
 
     const tooltipSpan = document.createElement("span");
     tooltipSpan.classList.add("tooltip");
+    tooltipSpan.classList.add("button-class");
     groupsDiv.appendChild(tooltipSpan);
 
     const allGroups = await getAllGroups();
@@ -55,6 +56,7 @@ async function loadGroups() {
         group.tabs.forEach(tab => {
             const tabDiv = document.createElement("div");
             tabDiv.classList.add("tab-container");
+            tabDiv.classList.add("button-class");
 
             let tabDivText;
 
