@@ -2,10 +2,13 @@ import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 import {getAllGroups} from "./data/databaseStorage.js";
 import {getAllOpenedTabs} from "./service/utils.js";
 
+const contextMenuId = "tabsManagerRemoveTab"
+
 const style = getStyle("js-style");
 const groupsDiv = document.getElementById('groups-container')
 
 let draggedTabDiv;
+let contextTabDiv;
 
 //------------------------------- Init -----------------------------------
 
@@ -47,8 +50,6 @@ async function loadGroups() {
         groupDiv.appendChild(groupHeader);
 
         //div with all links
-        //todo style: size, hover
-        //todo close on right click I think
         const groupTabsDiv = document.createElement("div");
         groupTabsDiv.classList.add('group-tabs-container');
         groupTabsDiv.setAttribute("group-id", group.id);
@@ -79,7 +80,9 @@ async function loadGroups() {
                 tabDivText = document.createTextNode(tab.url);
             }
             tabDiv.appendChild(tabDivText);
+            groupTabsDiv.appendChild(tabDiv);
 
+            //--------------- Actions with mouse ----------------
             tabDiv.draggable = true;
             //change appearance during drag
             tabDiv.ondragstart = function (event) {
@@ -92,7 +95,7 @@ async function loadGroups() {
                 event.target.style.opacity = '';
             }
 
-            //show tooltip
+            //show tooltip on hover
             tabDiv.onmouseover = function (event) {
                 tooltipSpan.textContent = tabDivText.textContent;
                 tooltipSpan.style.visibility = "visible"
@@ -103,7 +106,19 @@ async function loadGroups() {
                 tooltipSpan.style.visibility = "hidden"
             }
 
-            groupTabsDiv.appendChild(tabDiv);
+            //context menu delete button
+            tabDiv.oncontextmenu = function () {
+                //remove any existing custom context menu to avoid duplicates
+                browser.contextMenus.removeAll();
+
+                contextTabDiv = tabDiv;
+
+                browser.contextMenus.create({
+                    id: contextMenuId,
+                    title: 'Remove tab',
+                    contexts: ["all"]
+                })
+            }
         })
 
         //allow dragging over other tabs (necessary to trigger drop)
@@ -148,6 +163,21 @@ async function loadGroups() {
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
+
+//context menu actions
+browser.contextMenus.onClicked.addListener(handleContextMenuClick);
+
+// Remove context menu listener when the popup closes
+window.addEventListener("unload", () => {
+    browser.contextMenus.onClicked.removeListener(handleContextMenuClick); // Remove listener
+});
+
+function handleContextMenuClick(info, tab) {
+    if (info.menuItemId === contextMenuId) {
+        contextTabDiv.parentElement.removeChild(contextTabDiv);
+        contextTabDiv = null;
+    }
+}
 
 //todo update groups on CRUD of groups in editGroup
 //todo update groups on update active group

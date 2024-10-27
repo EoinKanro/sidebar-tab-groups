@@ -72,8 +72,15 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
     }
 });
 
-//context menu actions
-browser.contextMenus.onClicked.addListener(async (info, tab) => {
+// context menu actions
+browser.contextMenus.onClicked.addListener(handleContextMenuClick);
+
+// Remove context menu listener when the popup closes
+window.addEventListener("unload", () => {
+    browser.contextMenus.onClicked.removeListener(handleContextMenuClick); // Remove listener
+});
+
+async function handleContextMenuClick(info, tab) {
     try {
         if (info.menuItemId === moveGroupsContextId) {
             //allow moving buttons
@@ -91,7 +98,7 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     } catch (e) {
         console.error(e);
     }
-});
+}
 
 //open group editor on click new group
 document.getElementById('create-group').onclick = async function () {
