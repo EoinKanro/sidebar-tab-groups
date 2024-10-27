@@ -31,6 +31,7 @@ function loadTheme(theme) {
 await loadGroups();
 async function loadGroups() {
     draggedTabDiv = null;
+    contextTabDiv = null;
     groupsDiv.innerHTML = '';
 
     const allGroups = await getAllGroups();
