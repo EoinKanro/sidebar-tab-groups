@@ -15,16 +15,28 @@
 .group-tabs-container {
     max-height: 200px; /* Adjust this to show the number of rows you want */
     overflow: scroll;
-    padding: 10px; /* Optional: Adds padding inside the container */
-}
-
-.group-tabs-container div {
-    white-space: nowrap; /* Prevents text from wrapping to the next line */
-    align-items: center; /* Vertically centers icon and text */
 }
 
 .tab-container {
     font-size: 21px;
     padding-top: 5px;
     padding-bottom: 5px;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.tooltip {
+    visibility: hidden;
+    text-align: right;
+    border-radius: 6px;
+    padding: 5px 0;
+
+    /* Position the tooltip */
+    position: fixed;
+    bottom: 10px; /* Distance from the bottom of the viewport */
+    right: 10px; /* Distance from the right of the viewport */
+    z-index: 1000; /* Ensures it stays on top if needed */
 }

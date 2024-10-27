@@ -5,9 +5,7 @@ import {getAllOpenedTabs} from "./service/utils.js";
 const style = getStyle("js-style");
 const groupsDiv = document.getElementById('groups-container')
 
-let groupsAndDivs;
 let draggedTabDiv;
-let groupDivDraggedTabFrom;
 
 //------------------------------- Init -----------------------------------
 
@@ -21,11 +19,15 @@ function loadTheme(theme) {
 
 await loadGroups();
 async function loadGroups() {
+    draggedTabDiv = null;
     groupsDiv.innerHTML = '';
+
+    const tooltipSpan = document.createElement("span");
+    tooltipSpan.classList.add("tooltip");
+    groupsDiv.appendChild(tooltipSpan);
 
     const allGroups = await getAllGroups();
     const allTabs = await getAllOpenedTabs();
-    groupsAndDivs = [];
 
     allGroups.forEach((group) => {
         const groupDiv = document.createElement("div");
@@ -43,11 +45,12 @@ async function loadGroups() {
         groupHeader.appendChild(document.createTextNode(group.name));
         groupDiv.appendChild(groupHeader);
 
-        //links
+        //div with all links
         //todo style: size, hover
         //todo close on right click I think
         const groupTabsDiv = document.createElement("div");
         groupTabsDiv.classList.add('group-tabs-container');
+        groupTabsDiv.setAttribute("group-id", group.id);
 
         group.tabs.forEach(tab => {
             const tabDiv = document.createElement("div");
@@ -59,6 +62,7 @@ async function loadGroups() {
             if (openedTab) {
                 console.log(openedTab);
 
+                //icon of actual tab
                 const tabDivIcon = document.createElement("img");
                 tabDivIcon.src = openedTab.favIconUrl;
                 tabDivIcon.style.width = "16px";
@@ -66,17 +70,19 @@ async function loadGroups() {
 
                 tabDiv.appendChild(tabDivIcon);
 
+                //text of actual tab
                 tabDivText = document.createTextNode(openedTab.title);
             } else {
+                //just url
                 tabDivText = document.createTextNode(tab.url);
             }
+            tabDiv.appendChild(tabDivText);
 
             tabDiv.draggable = true;
             //change appearance during drag
             tabDiv.ondragstart = function (event) {
                 event.target.style.opacity = 0.4;
                 draggedTabDiv = tabDiv;
-                groupDivDraggedTabFrom = tabDiv.parentElement;
             };
 
             //reset appearance after drag
@@ -84,7 +90,17 @@ async function loadGroups() {
                 event.target.style.opacity = '';
             }
 
-            tabDiv.appendChild(tabDivText);
+            //show tooltip
+            tabDiv.onmouseover = function (event) {
+                tooltipSpan.textContent = tabDivText.textContent;
+                tooltipSpan.style.visibility = "visible"
+            }
+
+            //hide tooltip
+            tabDiv.onmouseout = function (event) {
+                tooltipSpan.style.visibility = "hidden"
+            }
+
             groupTabsDiv.appendChild(tabDiv);
         })
 
@@ -102,7 +118,7 @@ async function loadGroups() {
 
             if (targetTab && draggedTabDiv !== targetTab) {
                 //remove from old div
-                groupDivDraggedTabFrom.removeChild(draggedTabDiv);
+                draggedTabDiv.parentElement.removeChild(draggedTabDiv);
 
                 const targetTabY = targetTab.getBoundingClientRect().top;
 
@@ -117,16 +133,10 @@ async function loadGroups() {
             }
 
             draggedTabDiv = null;
-            groupDivDraggedTabFrom = null;
         }
 
         groupDiv.appendChild(groupTabsDiv);
         groupsDiv.appendChild(groupDiv);
-
-        groupsAndDivs.push({
-            group: group,
-            div: groupDiv
-        });
     })
 }
 
