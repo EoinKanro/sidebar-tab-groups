@@ -1,0 +1,66 @@
+#groups-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Flexible grid columns */
+    gap: 10px; /* Space between containers */
+    padding: 10px; /* Optional: Adds padding inside the container */
+    width: 100%; /* Ensures it takes up the full width of the viewport */
+    box-sizing: border-box; /* Prevents padding from adding to total width */
+}
+
+.group-container {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+}
+
+.group-tabs-container {
+    max-height: 200px; /* Adjust this to show the number of rows you want */
+    overflow: scroll;
+}
+
+.tab-container {
+    font-size: 17px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: background-color 0.6s ease;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+}
+
+.tab-container:hover {
+    background-color: var(--hover-bg);
+}
+
+#tooltip {
+    visibility: hidden;
+    text-align: right;
+    border-radius: 6px;
+    padding: 5px 0;
+
+    /* Position the tooltip */
+    position: fixed;
+    bottom: 10px; /* Distance from the bottom of the viewport */
+    right: 10px; /* Distance from the right of the viewport */
+    z-index: 1000; /* Ensures it stays on top if needed */
+}
+
+#save-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border: none;
+    font-size: 17px;
+    transition: background-color 0.6s ease;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+    padding: 7px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+#save-button:hover {
+    background-color: var(--hover-bg);
+}

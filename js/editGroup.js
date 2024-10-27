@@ -6,7 +6,7 @@ import {
     editGroupId, notify,
     notifyEditGroupActiveGroupChanged,
     notifyEditGroupGroupChanged, SidebarEditGroupClosedEvent,
-    SidebarReloadGroupButtonsEvent
+    SidebarReloadGroupButtonsEvent, TabsManagerReloadGroupsEvent
 } from "./service/events.js";
 import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 import {Tab, TabsGroup} from "./data/tabs.js";
@@ -113,6 +113,7 @@ saveButton.onclick = async function () {
 
     await deleteGroupToEditId();
     notify(new SidebarReloadGroupButtonsEvent());
+    notify(new TabsManagerReloadGroupsEvent());
     window.close();
 };
 
@@ -135,6 +136,7 @@ deleteButton.onclick = async function () {
         }
 
         await deleteGroupToEditId();
+        notify(new TabsManagerReloadGroupsEvent());
         window.close();
     }
 }
