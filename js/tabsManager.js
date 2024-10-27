@@ -2,7 +2,7 @@ import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 import {getAllGroups, saveGroup} from "./data/databaseStorage.js";
 import {getAllOpenedTabs} from "./service/utils.js";
 import {Tab} from "./data/tabs.js";
-import {BackgroundOpenTabsEvent, notify} from "./service/events.js";
+import {BackgroundOpenTabsEvent, notify, notifyTabsManagerReloadGroups, tabsManagerId} from "./service/events.js";
 import {getActiveGroupId} from "./data/localStorage.js";
 
 const contextMenuId = "tabsManagerRemoveTab";
@@ -238,5 +238,17 @@ function handleContextMenuClick(info, tab) {
     }
 }
 
-//todo update groups on CRUD of groups in editGroup
-//todo update groups on update active group
+//reload groups
+browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
+    try {
+        if (!message.target.includes(tabsManagerId)) {
+            return;
+        }
+
+        if (message.actionId === notifyTabsManagerReloadGroups) {
+            await loadGroups();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+})

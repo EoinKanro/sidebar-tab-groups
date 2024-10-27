@@ -10,7 +10,7 @@ import {
     SidebarUpdateActiveGroupButtonEvent,
     notifyBackgroundRestoreBackup,
     SidebarReloadGroupButtonsEvent,
-    SidebarUpdateButtonsPadding
+    SidebarUpdateButtonsPadding, TabsManagerReloadGroupsEvent
 } from "./service/events.js";
 import {
     deleteActiveGroupId,
@@ -405,7 +405,8 @@ function isAvailableToUpdate(windowId) {
 }
 
 async function save() {
-    await saveGroup(activeGroup)
+    await saveGroup(activeGroup);
+    notify(new TabsManagerReloadGroupsEvent());
 }
 
 //-------------------------- Listener for removing context menu items -----------------------
