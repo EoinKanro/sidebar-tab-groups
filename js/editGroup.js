@@ -31,10 +31,13 @@ const deleteButton = document.getElementById("delete");
 
 await loadGroupToEdit();
 loadAvailableIconsList();
+loadThemeFromBrowser();
 
-browser.theme.getCurrent().then(theme => {
-    loadTheme(theme);
-})
+function loadThemeFromBrowser() {
+    browser.theme.getCurrent().then(theme => {
+        loadTheme(theme);
+    })
+}
 
 function loadTheme(theme) {
     updatePopupStyle(style, theme);
@@ -46,6 +49,9 @@ function loadTheme(theme) {
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
+
+const lightSchemeMedia = window.matchMedia('(prefers-color-scheme: light)');
+lightSchemeMedia.addEventListener('change', loadThemeFromBrowser);
 
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
     try {

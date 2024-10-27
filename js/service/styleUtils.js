@@ -13,15 +13,25 @@ export function getStyle(styleId) {
 }
 
 export function updatePopupStyle(style, theme) {
+    console.log("Updating popup theme...");
+
     let colors;
+    const isLight = isThemeLight();
+
     if (theme?.colors) {
         colors = theme.colors;
-    } else {
+    } else if (isLight) {
         colors = {};
         colors.popup = "#fff";
         colors.popup_text = "rgb(21,20,26)";
         colors.toolbar = "rgba(207,207,216,.33)";
         colors.toolbar_text = "rgb(21,20,26)";
+    } else {
+        colors = {};
+        colors.popup = "rgb(66,65,77)";
+        colors.popup_text = "rgb(251,251,254)";
+        colors.toolbar = "rgb(43,42,51)";
+        colors.toolbar_text = "rgb(251, 251, 254)";
     }
 
     style.innerHTML =
@@ -44,15 +54,23 @@ export function updatePopupStyle(style, theme) {
 }
 
 export function updateSidebarStyle(style, theme) {
-    let colors
+    console.log("Updating sidebar theme...");
+
+    let colors;
+    const isLight = isThemeLight();
+
     if (theme?.colors) {
         colors = theme.colors;
-    } else {
+    } else if (isLight) {
         colors = {};
-
         colors.frame = "rgb(240, 240, 244)"
         colors.tab_background_text = "rgb(21, 20, 26)"
         colors.toolbar = "white"
+    } else {
+        colors = {};
+        colors.frame = "rgb(28, 27, 34)"
+        colors.tab_background_text = "#fbfbfe"
+        colors.toolbar = "rgb(43,42,51)"
     }
 
     style.innerHTML =
@@ -86,4 +104,8 @@ export async function updateSidebarButtonsPadding(style) {
             }
             `
     }
+}
+
+function isThemeLight() {
+    return window.matchMedia('(prefers-color-scheme: light)').matches;
 }

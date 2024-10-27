@@ -35,6 +35,7 @@ const saveTabsButton = document.getElementById('save-tabs-button');
 
 //---------------------------- Init ----------------------------------------
 await init();
+loadThemeFromBrowser();
 
 async function init() {
     const sidebarButtonsPaddingPx = await getSidebarButtonsPaddingPx();
@@ -57,9 +58,11 @@ async function init() {
     stopTabsActivityCheckbox.checked = isStopTabsActivity;
 }
 
-browser.theme.getCurrent().then(theme => {
-    loadTheme(theme);
-})
+function loadThemeFromBrowser() {
+    browser.theme.getCurrent().then(theme => {
+        loadTheme(theme);
+    })
+}
 
 function loadTheme(theme) {
     updatePopupStyle(style, theme);
@@ -133,6 +136,9 @@ saveBackupButton.onclick = async function () {
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
+
+const lightSchemeMedia = window.matchMedia('(prefers-color-scheme: light)');
+lightSchemeMedia.addEventListener('change', loadThemeFromBrowser);
 
 //allow only digits
 sidebarButtonsPadding.oninput = function (event) {
