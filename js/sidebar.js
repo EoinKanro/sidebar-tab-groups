@@ -75,7 +75,7 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
 // context menu actions
 browser.contextMenus.onClicked.addListener(handleContextMenuClick);
 
-// Remove context menu listener when the popup closes
+// Remove context menu listener when the sidebar closes
 window.addEventListener("unload", () => {
     browser.contextMenus.onClicked.removeListener(handleContextMenuClick); // Remove listener
 });
