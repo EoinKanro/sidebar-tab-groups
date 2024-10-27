@@ -22,3 +22,9 @@
     white-space: nowrap; /* Prevents text from wrapping to the next line */
     align-items: center; /* Vertically centers icon and text */
 }
+
+.tab-container {
+    font-size: 21px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
