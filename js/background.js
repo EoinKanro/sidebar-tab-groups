@@ -117,7 +117,9 @@ async function processOpenTabs(groupId) {
 async function openFirstGroup() {
     const allGroups = await getAllGroups();
     if (allGroups && allGroups.length > 0) {
-        const firstGroup = allGroups[0];
+        const firstGroup = allGroups.reduce((lowest, current) => {
+            return current.index < lowest.index ? current : lowest;
+        }, allGroups[0]);
         await processOpenTabs(firstGroup.id);
     } else {
         await saveActiveGroupId(null);
