@@ -22,10 +22,9 @@ import {
     saveActiveGroupId,
     saveActiveWindowId,
     saveBackupMinutes,
-    saveCloseTabsOnChangeGroup,
     saveEnableBackup,
     saveSidebarButtonsPaddingPx,
-    saveStopTabsActivityOnChangeGroup
+    saveTabsBehaviorOnChangeGroup
 } from "./data/localStorage.js";
 import {Tab} from "./data/tabs.js";
 import {deleteAllGroups, getAllGroups, saveGroup} from "./data/databaseStorage.js";
@@ -197,8 +196,7 @@ async function processRestoreBackup(json) {
         await saveSetting(json.enableBackup, async () => await saveEnableBackup(json.enableBackup));
         await saveSetting(json.backupMinutes, async () => await saveBackupMinutes(Number(json.backupMinutes)));
         await saveSetting(json.sidebarButtonsPaddingPx, async () => await saveSidebarButtonsPaddingPx(Number(json.sidebarButtonsPaddingPx)));
-        await saveSetting(json.closeTabsOnChangeGroup, async () => await saveCloseTabsOnChangeGroup(json.closeTabsOnChangeGroup));
-        await saveSetting(json.stopTabsActivityOnChangeGroup, async () => await saveStopTabsActivityOnChangeGroup(json.stopTabsActivityOnChangeGroup));
+        await saveSetting(json.tabsBehaviorOnChangeGroup, async () => await saveTabsBehaviorOnChangeGroup(json.tabsBehaviorOnChangeGroup));
 
         await cleanInitBackupInterval();
         notify(new SidebarUpdateButtonsPadding());
