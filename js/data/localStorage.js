@@ -6,8 +6,7 @@ const enableBackupName = "enableBackup";
 const backupMinutesName = "backupMinutes";
 const lastBackupTimeName = "lastBackupTime";
 const sidebarButtonsPaddingPxName = "sidebarButtonsPaddingPx";
-const closeTabsOnChangeGroupName = "closeTabsOnChangeGroup";
-const stopTabsActivityOnChangeGroupName = "stopTabsActivityOnChangeGroup";
+const tabsBehaviorOnChangeGroup = "tabsBehaviorOnChangeGroup";
 
 //-------------------- Temp data --------------------
 //------------------- Active group ------------------
@@ -85,20 +84,12 @@ export async function saveSidebarButtonsPaddingPx(px) {
 }
 
 //------------------------ Tabs ---------------------------
-export async function getCloseTabsOnChangeGroup() {
-    return await getFromLocalStorage(closeTabsOnChangeGroupName);
+export async function getTabsBehaviorOnChangeGroup() {
+    return await getFromLocalStorage(tabsBehaviorOnChangeGroup);
 }
 
-export async function saveCloseTabsOnChangeGroup(bool) {
-    await saveToLocalStorage(closeTabsOnChangeGroupName, bool);
-}
-
-export async function getStopTabsActivityOnChangeGroup() {
-    return await getFromLocalStorage(stopTabsActivityOnChangeGroupName);
-}
-
-export async function saveStopTabsActivityOnChangeGroup(bool) {
-    await saveToLocalStorage(stopTabsActivityOnChangeGroupName, bool);
+export async function saveTabsBehaviorOnChangeGroup(str) {
+    await saveToLocalStorage(tabsBehaviorOnChangeGroup, str);
 }
 
 //----------------------- Utils ----------------------------
