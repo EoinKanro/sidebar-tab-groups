@@ -17,6 +17,13 @@ export class Tab {
     }
 }
 
+export class UpdatedTabsGroup {
+    constructor(id) {
+        this.id = id;
+        this.date = new Date().getTime();
+    }
+}
+
 export const TABS_BEHAVIOR = Object.freeze({
     SUSPEND: "suspend",
     HIDE: "hide",

@@ -1,0 +1,29 @@
+digraph G {
+
+  saveSidebarButtonsPaddingPx [ shape=house ];
+  saveEnableBackup [ shape=house ];
+  saveBackupMinutes [ shape=house ];
+  saveTabsBehaviorOnChangeGroup [ shape=house ];
+  saveDeletedGroup [ shape=house ];
+  saveUpdatedGroup [ shape=house ];
+  saveGroupToEditId [ shape=house ];
+
+  settings -> saveSidebarButtonsPaddingPx;
+  settings -> saveEnableBackup;
+  settings -> saveBackupMinutes;
+  settings -> saveTabsBehaviorOnChangeGroup;
+
+  settings -> background [ label = notifyReinitBackupThread ];
+  settings -> background [ label = notifyRestoreFromBackup ];
+
+  editGroup -> saveDeletedGroup;
+  editGroup -> saveUpdatedGroup;
+
+  saveGroupToEditId -> editGroup;
+
+  tabsManager -> saveUpdatedGroup;
+
+  saveUpdatedGroup -> tabsManager;
+  saveDeletedGroup -> tabsManager;
+
+}
