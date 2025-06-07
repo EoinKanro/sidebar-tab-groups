@@ -1,6 +1,7 @@
 
 export const reinitBackupThreadId = 1;
 export const restoreFromBackupId = 2;
+export const openTabGroupId = 3;
 
 class Event {
   constructor(id, data = {}) {
@@ -22,4 +23,11 @@ export function notifyRestoreFromBackup(json) {
   notify(new Event(restoreFromBackupId, {
     json: json
   }))
+}
+
+export function notifyOpenTabGroup(windowId, groupId) {
+  notify(new Event(openTabGroupId, {
+    windowId: windowId,
+    groupId: groupId
+  }));
 }

@@ -1,3 +1,4 @@
+import {getSidebarButtonsPaddingPx} from "../data/localStorage.js";
 
 const THEME_STYLE_ID = "theme-style";
 
@@ -126,4 +127,16 @@ export function updateSidebarStyle(styleElement, theme) {
             background-color: ${colors.toolbar} !important;
         }
         `;
+}
+
+export async function updateSidebarButtonsPadding(styleElement) {
+  const paddingPx = await getSidebarButtonsPaddingPx();
+  if (paddingPx) {
+    styleElement.innerHTML =
+        `
+            .button-class {
+                height: ${paddingPx * 2}px !important;
+            }
+            `
+  }
 }

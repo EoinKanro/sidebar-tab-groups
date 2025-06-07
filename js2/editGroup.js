@@ -6,7 +6,7 @@ import {
   saveUpdatedGroup
 } from "./data/localStorage.js";
 import {getGroup} from "./data/databaseStorage.js";
-import {TabsGroup} from "./data/tabs.js";
+import {TabsGroup} from "./data/dataClasses.js";
 
 let groupToEdit;
 
@@ -97,7 +97,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       await loadGroupToEdit();
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 });
 
@@ -114,7 +114,7 @@ saveButton.onclick = async function () {
   }
 
   await saveGroup(group);
-  await saveUpdatedGroup(group.id);
+  await saveUpdatedGroup(group.id, ['name', 'icon']);
   window.close();
 };
 

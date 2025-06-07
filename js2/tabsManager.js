@@ -6,7 +6,7 @@ import {
   saveUpdatedGroup,
   updatedGroupName
 } from "./data/localStorage.js";
-import {Tab} from "./data/tabs.js";
+import {Tab} from "./data/dataClasses.js";
 
 //----------------------- Document elements ----------------------
 
@@ -244,9 +244,10 @@ saveButton.onclick = async function (event) {
   }
 
   console.log("Result:", allGroups);
+  //todo save and call background reload all
   for (let group of allGroups) {
     await saveGroup(group);
-    await saveUpdatedGroup(group.id);
+    await saveUpdatedGroup(group.id, ['tabs']);
   }
   window.close();
 }

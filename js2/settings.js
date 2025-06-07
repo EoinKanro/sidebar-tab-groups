@@ -16,7 +16,7 @@ import {
   notifyReinitBackupThread,
   notifyRestoreFromBackup
 } from "./service/notifications.js";
-import {TABS_BEHAVIOR} from "./data/tabs.js";
+import {TABS_BEHAVIOR} from "./data/dataClasses.js";
 import {replaceNonDigits} from "./service/commonUtils.js";
 import {backupGroups} from "./service/backupUtils.js";
 

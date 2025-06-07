@@ -1,4 +1,3 @@
-import {UpdatedTabsGroup} from "./tabs.js";
 
 //----------------------------------------------------------
 //--------------------- Temp Data --------------------------
@@ -28,8 +27,8 @@ export async function getGroupToEditId() {
 }
 
 //------------------ Updated group --------------------
-export async function saveUpdatedGroup(groupId) {
-  return await saveToLocalStorage(updatedGroupName, new UpdatedTabsGroup(groupId));
+export async function saveUpdatedGroup(groupId, changes) {
+  return await saveToLocalStorage(updatedGroupName, new UpdatedTabsGroup(groupId, changes));
 }
 
 //------------------ Deleted group --------------------
@@ -94,3 +93,13 @@ async function saveToLocalStorage(key, value) {
   console.log(`Saving ${key} to local storage...`, value);
   await browser.storage.local.set({ [key]: value });
 }
+
+
+export class UpdatedTabsGroup {
+  constructor(id, changes = []) {
+    this.id = id;
+    this.changes = changes;
+    this.date = new Date().getTime();
+  }
+}
+

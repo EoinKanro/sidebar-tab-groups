@@ -3,7 +3,7 @@ import {
   focusWindow,
   getExtensionPopupWithName,
   openPopup
-} from "./service/browserUtils";
+} from "./service/browserUtils.js";
 
 //---------------------- Document elements -----------------------
 

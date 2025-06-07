@@ -15,14 +15,14 @@ export async function openPopup(url, widthMultiplier, heightMultiplier) {
   })
 }
 
-export async function getExtensionPopupWithName(htmlName) {
+export async function getExtensionPopupWithName(shortUrl) {
   const popups = await browser.windows.getAll({
     populate: true,
     windowTypes:['popup']
   });
 
   for (const popup of popups) {
-    if (popup.tabs?.some(tab => tab.url.endsWith(htmlName))) {
+    if (popup.tabs?.some(tab => tab.url.endsWith(shortUrl))) {
       return popup;
     }
   }

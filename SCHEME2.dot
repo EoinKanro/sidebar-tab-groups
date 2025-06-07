@@ -26,4 +26,11 @@ digraph G {
   saveUpdatedGroup -> tabsManager;
   saveDeletedGroup -> tabsManager;
 
+  sidebar -> background [ label = notifyOpenTabGroup ];
+  sidebar -> saveUpdatedGroup;
+  sidebar -> saveGroupToEditId;
+
+  saveUpdatedGroup -> sidebar;
+  saveDeletedGroup -> sidebar;
+  saveSidebarButtonsPaddingPx -> sidebar;
 }
