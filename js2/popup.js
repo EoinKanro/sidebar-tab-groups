@@ -1,4 +1,9 @@
 import {initThemeStyle, updatePopupStyle} from "./service/styleUtils.js";
+import {
+  focusWindow,
+  getExtensionPopupWithName,
+  openPopup
+} from "./service/browserUtils";
 
 //---------------------- Document elements -----------------------
 
@@ -19,23 +24,19 @@ openSidebarButton.onclick = function () {
 };
 
 settingsButton.onclick = async function () {
-  await openPopup("../html/settings.html", 0.6, 0.5);
+  let popup = getExtensionPopupWithName("html/settings.html");
+  if (popup) {
+    await focusWindow(popup.id);
+  } else {
+    await openPopup("../html/settings.html", 0.6, 0.5);
+  }
 };
 
 tabsManagerButton.onclick = async function () {
-  await openPopup("../html/tabsManager.html", 0.8, 0.8);
-}
-
-//-------------------- Utils ----------------------------
-
-async function openPopup(url, widthMultiplier, heightMultiplier) {
-  const viewportWidth = Math.round(window.screen.width * widthMultiplier);
-  const viewportHeight = Math.round(window.screen.height * heightMultiplier);
-
-  browser.windows.create({
-    url: browser.runtime.getURL(url),
-    type: "popup",
-    width: viewportWidth,
-    height: viewportHeight
-  })
+  let popup = getExtensionPopupWithName("html/tabsManager.html");
+  if (popup) {
+    await focusWindow(popup.id);
+  } else {
+    await openPopup("../html/tabsManager.html", 0.8, 0.8);
+  }
 }
