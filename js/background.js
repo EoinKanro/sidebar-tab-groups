@@ -437,15 +437,19 @@ browser.storage.onChanged.addListener(async (changes, area) => {
     console.log("Processing local storage changes...", changes);
     if (deletedGroupName in changes) {
       //delete group
-      const groupChanges = changes[deletedGroupName];
+      const groupChanges = changes[deletedGroupName]?.newValue;
+      if (groupChanges === undefined || !groupChanges) {
+        return;
+      }
+
       await closeGroup(groupChanges.data);
       await deleteGroup(groupChanges.data);
 
     } else if (updatedGroupName in changes) {
       //create or update group
-      const groupChanges = changes[updatedGroupName];
+      const groupChanges = changes[updatedGroupName]?.newValue;
 
-      if (groupChanges.data === undefined || !groupChanges.data) {
+      if (groupChanges === undefined || !groupChanges || groupChanges.data === undefined || !groupChanges.data) {
         return;
       }
 

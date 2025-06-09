@@ -292,7 +292,11 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       await updateSidebarButtonsPadding(sidebarButtonsPadding);
     } else if (updatedGroupName in changes) {
       //update button
-      let update = changes[updatedGroupName];
+      let update = changes[updatedGroupName]?.newValue;
+      if (update === undefined || !update || update.changes === undefined || !update.changes) {
+        return;
+      }
+
       if ('name' in update.changes) {
         await createOrUpdateGroupButtonIconAndName(update.data);
       }
@@ -301,7 +305,11 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       }
     } else if (deletedGroupName in changes) {
       //delete button
-      await deleteGroupButton(changes[deletedGroupName].id);
+      const groupId = changes[deletedGroupName]?.newValue?.data
+      if (groupId === undefined || !groupId) {
+        return;
+      }
+      await deleteGroupButton(groupId);
     } else if (windowIdGroupIdName in changes) {
       //update active group button
       await updateActiveGroupId();
