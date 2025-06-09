@@ -13,7 +13,7 @@ import {
   closeWindow,
   focusWindow,
   getAllOpenedTabs,
-  hideTabs,
+  hideTabs, openEmptyWindow,
   openTab,
   suspendTabs
 } from "./service/browserUtils.js";
@@ -56,13 +56,15 @@ async function closeAllAndOpenFirstGroup() {
     populate: false
   });
 
-  const allGroups = await getAllGroups();
-  if (!allGroups) {
-    return;
-  }
-
   windowIdGroup.clear();
   groupIdWindowId.clear();
+
+  const allGroups = await getAllGroups();
+  if (!allGroups) {
+    await openEmptyWindow();
+    await closeWindows(currentWindows);
+    return;
+  }
 
   if (allGroups.length <= 0) {
     return;
@@ -73,7 +75,11 @@ async function closeAllAndOpenFirstGroup() {
   }, allGroups[0]);
 
   await openGroup(firstGroup.id, null);
-  for (let win of currentWindows) {
+  await closeWindows(currentWindows);
+}
+
+async function closeWindows(windows) {
+  for (let win of windows) {
     await closeWindow(win.id);
   }
 }
@@ -93,9 +99,7 @@ async function openGroup(groupId, windowId) {
   }
 
   if (windowId === undefined || !windowId) {
-    windowId = (await browser.windows.create({
-      type: 'normal'
-    })).id;
+    windowId = (await openEmptyWindow()).id;
   }
 
   group = await openTabs(group, windowId);

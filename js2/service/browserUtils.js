@@ -29,6 +29,12 @@ export async function getExtensionPopupWithName(shortUrl) {
   return null;
 }
 
+export async function openEmptyWindow() {
+  return await browser.windows.create({
+    type: 'normal'
+  });
+}
+
 export async function closeWindow(id) {
   await browser.windows.remove(id);
 }
