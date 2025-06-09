@@ -5,11 +5,13 @@ import {
   updateSidebarStyle
 } from "./service/styleUtils.js";
 import {
-  deletedGroupName, getWindowIdGroupId,
+  deletedGroupName,
+  getWindowIdGroupId,
   saveGroupToEditId,
   saveUpdatedGroup,
   sidebarButtonsPaddingPxName,
-  updatedGroupName, windowIdGroupIdName
+  updatedGroupName,
+  windowIdGroupIdName
 } from "./data/localStorage.js";
 import {
   focusWindow,
@@ -286,6 +288,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       return;
     }
 
+    console.log("Processing local storage changes...", changes);
     if (sidebarButtonsPaddingPxName in changes) {
       //update  style
       await updateSidebarButtonsPadding(sidebarButtonsPadding);

@@ -72,6 +72,7 @@ async function initDefaultBackupValues() {
 //-------------------- Actions ---------------------
 //----------------- Group Manager ------------------
 async function closeAllAndOpenFirstGroup() {
+  console.log("Closing all windows and open first group...");
   const currentWindows = await browser.windows.getAll({
     populate: false
   });
@@ -309,6 +310,7 @@ async function processTabsActionsLoop() {
   while(true) {
     try {
       const msg = await tabsActionQueue.take();
+      console.log("Processing tab message...", msg);
 
       if (msg instanceof CreateTabAction) {
         await createTab(msg);
@@ -369,6 +371,7 @@ async function checkAndBackup() {
 }
 
 async function processRestoreBackup(json) {
+  console.log("Restoring from backup...", json);
   await backupGroups();
 
   await deleteAllGroups();
@@ -403,6 +406,7 @@ browser.contextMenus.onHidden.addListener(() => {
 //--------------- Runtime messages -----------------
 browser.runtime.onMessage.addListener(async (msg, sender) => {
   try {
+    console.log("Processing runtime message...", msg);
     if (msg.id === reinitBackupThreadId) {
       await reinitBackupProcess();
     } else if (msg.id === restoreFromBackupId) {
@@ -423,6 +427,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       return;
     }
 
+    console.log("Processing local storage changes...", changes);
     if (deletedGroupName in changes) {
       //delete group
       const groupChanges = changes[deletedGroupName];

@@ -7,6 +7,7 @@ import {
 } from "../data/localStorage.js";
 
 export async function backupGroups() {
+  console.log("Backupping to downloads...")
   const allGroups = await getAllGroups();
   const enableBackup = await getEnableBackup();
   const backupMinutes = await getBackupMinutes();
