@@ -18,7 +18,7 @@ import {
   openPopup
 } from "./service/browserUtils.js";
 import {notifyOpenTabGroup} from "./service/notifications.js";
-import {getAllGroups, getGroup, saveGroup} from "./data/databaseStorage.js";
+import {getAllGroups, getGroup} from "./data/databaseStorage.js";
 
 //----------------------- Document elements --------------------------
 
@@ -182,29 +182,22 @@ async function updateActiveGroupButton() {
   }
 }
 
-async function createOrUpdateGroupButtonIconAndName(groupId) {
-  await createOrUpdateGroupButton(groupId, (groupButton, group) => {
+async function createOrUpdateGroupButtonIconAndName(group) {
+  await createOrUpdateGroupButton(group, (groupButton, group) => {
     groupButton.setAttribute(groupNameAttribute, group.name);
     groupButton.children[0].textContent = group.icon;
   })
 }
 
-async function createOrUpdateGroupButtonIndex(groupId) {
-  await createOrUpdateGroupButton(groupId, (groupButton, group) => {
+async function createOrUpdateGroupButtonIndex(group) {
+  await createOrUpdateGroupButton(group, (groupButton, group) => {
     const ref = tabButtons.children[group.index] ?? null;
     parent.insertBefore(groupButton, ref);
   });
 }
 
-async function createOrUpdateGroupButton(groupId, updateFunction) {
-  let group = await getGroup(groupId);
-  if (!group) {
-    console.warn("Can't find group " + groupId);
-    await deleteGroupButton(groupId);
-    return;
-  }
-
-  let groupButton = await getGroupButtonById(groupId);
+async function createOrUpdateGroupButton(group, updateFunction) {
+  let groupButton = await getGroupButtonById(group.id);
 
   if (!groupButton) {
     await createGroupButton(group);
@@ -288,10 +281,10 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       //update button
       let update = changes[updatedGroupName];
       if ('name' in update.changes) {
-        await createOrUpdateGroupButtonIconAndName(update.id);
+        await createOrUpdateGroupButtonIconAndName(update.data);
       }
       if ('index' in update.changes) {
-        await createOrUpdateGroupButtonIndex(update.id);
+        await createOrUpdateGroupButtonIndex(update.data);
       }
     } else if (deletedGroupName in changes) {
       //delete button
@@ -353,8 +346,7 @@ tabButtons.ondrop = async function (event) {
       }
 
       groupToUpdate.index = i;
-      await saveGroup(groupToUpdate);
-      await saveUpdatedGroup(groupToUpdate.id, ['index'])
+      await saveUpdatedGroup(['index'], groupToUpdate)
     }
   }
 

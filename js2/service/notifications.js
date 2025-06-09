@@ -2,6 +2,7 @@
 export const reinitBackupThreadId = 1;
 export const restoreFromBackupId = 2;
 export const openTabGroupId = 3;
+export const openFirstGroupId = 4;
 
 class Event {
   constructor(id, data = {}) {
@@ -30,4 +31,8 @@ export function notifyOpenTabGroup(windowId, groupId) {
     windowId: windowId,
     groupId: groupId
   }));
+}
+
+export function notifyOpenFirstGroup() {
+  notify(new Event(openFirstGroupId));
 }

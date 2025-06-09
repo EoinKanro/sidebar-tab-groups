@@ -1,11 +1,15 @@
 import {
+  deletedGroupName,
   getBackupMinutes,
   getEnableBackup,
   getLastBackupTime,
   getTabsBehaviorOnChangeGroup,
   saveBackupMinutes,
   saveEnableBackup,
-  saveUpdatedGroup
+  saveSidebarButtonsPaddingPx,
+  saveTabsBehaviorOnChangeGroup,
+  saveUpdatedGroup,
+  updatedGroupName
 } from "./data/localStorage.js";
 import {backupGroups} from "./service/backupUtils.js";
 import {
@@ -13,13 +17,26 @@ import {
   closeWindow,
   focusWindow,
   getAllOpenedTabs,
-  hideTabs, openEmptyWindow,
+  hideTabs,
+  openEmptyWindow,
   openTab,
   suspendTabs
 } from "./service/browserUtils.js";
 import {isUrlEmpty} from "./service/commonUtils.js";
 import {Tab, TABS_BEHAVIOR} from "./data/dataClasses.js";
-import {getAllGroups, getGroup, saveGroup} from "./data/databaseStorage.js";
+import {
+  deleteAllGroups,
+  deleteGroup,
+  getAllGroups,
+  getGroup,
+  saveGroup
+} from "./data/databaseStorage.js";
+import {
+  openFirstGroupId,
+  openTabGroupId,
+  reinitBackupThreadId,
+  restoreFromBackupId
+} from "./service/notifications.js";
 
 //-------------------- Temp Data ---------------------
 
@@ -261,7 +278,20 @@ async function updateGroup(msg, updateFunction) {
 
 async function saveUpdateGroup(group) {
   await saveGroup(group);
-  await saveUpdatedGroup(group.id, ["tabs"]);
+  await saveUpdatedGroup(["tabs"], null);
+}
+
+async function closeGroup(groupId) {
+  const windowId = groupIdWindowId.get(groupId);
+
+  if (windowId === undefined || !windowId) {
+    return;
+  }
+
+  groupIdWindowId.delete(groupId);
+  windowIdGroup.delete(windowId);
+
+  await closeWindow(windowId);
 }
 
 async function processTabsActionsLoop() {
@@ -327,7 +357,31 @@ async function checkAndBackup() {
   }
 }
 
-//todo restore
+async function processRestoreBackup(json) {
+  await backupGroups();
+
+  await deleteAllGroups();
+  await closeAllAndOpenFirstGroup();
+
+  for (const item of json.allGroups) {
+    await saveGroup(item);
+  }
+
+  await saveSetting(json.enableBackup, async () => await saveEnableBackup(json.enableBackup));
+  await saveSetting(json.backupMinutes, async () => await saveBackupMinutes(Number(json.backupMinutes)));
+  await saveSetting(json.sidebarButtonsPaddingPx, async () => await saveSidebarButtonsPaddingPx(Number(json.sidebarButtonsPaddingPx)));
+  await saveSetting(json.tabsBehaviorOnChangeGroup, async () => await saveTabsBehaviorOnChangeGroup(json.tabsBehaviorOnChangeGroup));
+
+  await reinitBackupProcess();
+
+  await closeAllAndOpenFirstGroup();
+}
+
+async function saveSetting(param, saveFunction) {
+  if (param !== undefined && param !== null) {
+    await saveFunction();
+  }
+}
 
 //---------------- Event Listeners -----------------
 //----------------- Context menu -------------------
@@ -336,27 +390,83 @@ browser.contextMenus.onHidden.addListener(() => {
 });
 
 //--------------- Runtime messages -----------------
-browser.runtime.onMessage.addListener((msg, sender) => {
-  //todo all from scheme2
-  //todo update, delete, reload from tabsManager, open from sidebar
-  if (msg.type === 'REQUEST_WINDOW_DATA') {
-    const wid = sender.tab.windowId;      // the sidebar’s own window
-    return Promise.resolve(windowData.get(wid)); // may be undefined
+browser.runtime.onMessage.addListener(async (msg, sender) => {
+  try {
+    if (msg.id === reinitBackupThreadId) {
+      await reinitBackupProcess();
+    } else if (msg.id === restoreFromBackupId) {
+      await processRestoreBackup(msg.json);
+    } else if (msg.id === openTabGroupId) {
+      return Promise.resolve(openGroup(msg.groupId, msg.windowId));
+    } else if (msg.id === openFirstGroupId) {
+      await closeAllAndOpenFirstGroup();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+browser.storage.onChanged.addListener(async (changes, area) => {
+  try {
+    if (area !== 'local') {
+      return;
+    }
+
+    if (deletedGroupName in changes) {
+      //delete group
+      const groupChanges = changes[deletedGroupName];
+      await closeGroup(groupChanges.data);
+      await deleteGroup(groupChanges.data);
+
+    } else if (updatedGroupName in changes) {
+      //create or update group
+      const groupChanges = changes[updatedGroupName];
+
+      if (groupChanges.data === undefined || !groupChanges.data) {
+        return;
+      }
+
+      if (!groupIdWindowId.has(groupChanges.data.id)) {
+        await saveGroup(groupChanges.data);
+        return;
+      }
+
+      const group = windowIdGroup[groupIdWindowId[groupChanges.data.id]];
+      if (group === undefined || !group) {
+        console.warn("Update message expired", groupChanges);
+        return;
+      }
+
+      if ('name' in groupChanges.changes) {
+        group.name = groupChanges.data.name;
+        group.icon = groupChanges.data.icon;
+      } else if ('index' in groupChanges.changes) {
+        group.index = groupChanges.data.index;
+      }
+
+      await saveGroup(group);
+    }
+  } catch (e) {
+    console.error(e);
   }
 });
 
 //----------------- Group Manager ------------------
 //remove temp info about group
 browser.windows.onRemoved.addListener(id => {
-  const group = windowIdGroup.get(id);
-  if (group === undefined || !group) {
-    return;
-  }
+  try {
+    const group = windowIdGroup.get(id);
+    if (group === undefined || !group) {
+      return;
+    }
 
-  console.log("Stopping group processing...", group);
-  windowIdGroup.delete(id);
-  if (groupIdWindowId.get(group.id) === id) {
-    groupIdWindowId.delete(group.id);
+    console.log("Stopping group processing...", group);
+    windowIdGroup.delete(id);
+    if (groupIdWindowId.get(group.id) === id) {
+      groupIdWindowId.delete(group.id);
+    }
+  } catch (e) {
+    console.error(e);
   }
 });
 

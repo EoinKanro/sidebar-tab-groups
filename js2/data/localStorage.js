@@ -27,13 +27,13 @@ export async function getGroupToEditId() {
 }
 
 //------------------ Updated group --------------------
-export async function saveUpdatedGroup(groupId, changes) {
-  return await saveToLocalStorage(updatedGroupName, new UpdatedTabsGroup(groupId, changes));
+export async function saveUpdatedGroup(changes, group) {
+  return await saveToLocalStorage(updatedGroupName, new UpdatedTabsGroup(changes, group));
 }
 
 //------------------ Deleted group --------------------
 export async function saveDeletedGroup(groupId) {
-  return await saveToLocalStorage(deletedGroupName, new UpdatedTabsGroup(groupId));
+  return await saveToLocalStorage(deletedGroupName, new UpdatedTabsGroup(null, groupId));
 }
 
 //----------------------------------------------------------
@@ -96,10 +96,9 @@ async function saveToLocalStorage(key, value) {
 
 
 export class UpdatedTabsGroup {
-  constructor(id, changes = []) {
-    this.id = id;
+  constructor(changes = [], data = {}) {
     this.changes = changes;
+    this.data = data;
     this.date = new Date().getTime();
   }
 }
-

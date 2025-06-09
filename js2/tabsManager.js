@@ -1,12 +1,9 @@
 import {initThemeStyle, updatePopupStyle} from "./service/styleUtils.js";
 import {getAllGroups, saveGroup} from "./data/databaseStorage.js";
 import {getAllOpenedTabs} from "./service/browserUtils.js";
-import {
-  deletedGroupName,
-  saveUpdatedGroup,
-  updatedGroupName
-} from "./data/localStorage.js";
+import {deletedGroupName, updatedGroupName} from "./data/localStorage.js";
 import {Tab} from "./data/dataClasses.js";
+import {notifyOpenFirstGroup} from "./service/notifications.js";
 
 //----------------------- Document elements ----------------------
 
@@ -244,10 +241,9 @@ saveButton.onclick = async function (event) {
   }
 
   console.log("Result:", allGroups);
-  //todo save and call background reload all
   for (let group of allGroups) {
     await saveGroup(group);
-    await saveUpdatedGroup(group.id, ['tabs']);
   }
+  notifyOpenFirstGroup();
   window.close();
 }

@@ -1,32 +1,46 @@
 digraph G {
 
-    background,
-    sidebar,
-    editGroup,
-    settings,
-    tabsManager
+  saveSidebarButtonsPaddingPx [ shape=house ];
+  saveEnableBackup [ shape=house ];
+  saveBackupMinutes [ shape=house ];
+  saveTabsBehaviorOnChangeGroup [ shape=house ];
+  saveDeletedGroup [ shape=house ];
+  saveUpdatedGroup [ shape=house ];
+  saveGroupToEditId [ shape=house ];
 
+  settings -> saveSidebarButtonsPaddingPx;
+  settings -> saveEnableBackup;
+  settings -> saveBackupMinutes;
+  settings -> saveTabsBehaviorOnChangeGroup;
 
-    background -> editGroup [ label="open group. ActiveGroupChanged" ]
-    background -> sidebar [ label="open group. ReloadGroupButtons" ]
-    background -> sidebar [ label="create first group. UpdateActiveGroupButton" ]
-    background -> tabsManager [ label="active updated. ReloadGroups"]
+  settings -> background [ label = notifyReinitBackupThread ];
+  settings -> background [ label = notifyRestoreFromBackup ];
 
-    sidebar -> background [ label="click group. OpenTabs" ]
-    sidebar -> editGroup [ label="click edit again. GroupChanged" ]
+  editGroup -> saveDeletedGroup;
+  editGroup -> saveUpdatedGroup;
 
-    editGroup -> sidebar [ label="close. EditGroupClosed" ]
-    editGroup -> background [ label="update active. ActiveGroupUpdated" ]
-    editGroup -> background [ label="create first group . ActiveGroupUpdated" ]
-    editGroup -> sidebar [ label="update. ReloadGroupButtons" ]
-    editGroup -> background [ label="delete active. ActiveGroupDeleted" ]
-    editGroup -> background [ label="delete active. OpenFirstGroupTabs" ]
-    editGroup -> sidebar [ label="delete not active. ReloadGroupButtons" ]
-    editGroup -> tabsManager [ label="delete. ReloadGroups" ]
-    editGroup -> tabsManager [ label="save. ReloadGroups" ]
+  saveGroupToEditId -> editGroup;
 
-    settings -> background [ label="restore. RestoreBackup" ]
-    settings -> background [ label="update backup. ReinitBackupEvent" ]
-    settings -> sidebar [ label="change appearance. UpdateButtonsPadding" ]
+  tabsManager -> saveUpdatedGroup;
+  tabsManager -> background [ label = openFirstGroupId ];
 
+  saveUpdatedGroup -> tabsManager;
+  saveDeletedGroup -> tabsManager;
+
+  sidebar -> background [ label = notifyOpenTabGroup ];
+  sidebar -> saveUpdatedGroup;
+  sidebar -> saveGroupToEditId;
+
+  saveUpdatedGroup -> sidebar;
+  saveDeletedGroup -> sidebar;
+  saveSidebarButtonsPaddingPx -> sidebar;
+
+  background -> saveBackupMinutes;
+  background -> saveEnableBackup;
+  background -> saveSidebarButtonsPaddingPx;
+  background -> saveTabsBehaviorOnChangeGroup;
+  background -> saveUpdatedGroup;
+
+  saveDeletedGroup -> background;
+  saveUpdatedGroup -> background;
 }

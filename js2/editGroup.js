@@ -113,8 +113,7 @@ saveButton.onclick = async function () {
     group = new TabsGroup(groupName.value, iconSelected.textContent);
   }
 
-  await saveGroup(group);
-  await saveUpdatedGroup(group.id, ['name', 'icon']);
+  await saveUpdatedGroup(['name', 'icon'], group);
   window.close();
 };
 
@@ -127,7 +126,6 @@ deleteButton.onclick = async function () {
     return;
   }
 
-  await deleteGroup(groupToEdit.id);
   await saveDeletedGroup(groupToEdit.id);
   window.close();
 }
