@@ -7,6 +7,7 @@ digraph G {
   saveDeletedGroup [ shape=house ];
   saveUpdatedGroup [ shape=house ];
   saveGroupToEditId [ shape=house ];
+  saveWindowIdGroupId [ shape=house ];
 
   settings -> saveSidebarButtonsPaddingPx;
   settings -> saveEnableBackup;
@@ -34,12 +35,14 @@ digraph G {
   saveUpdatedGroup -> sidebar;
   saveDeletedGroup -> sidebar;
   saveSidebarButtonsPaddingPx -> sidebar;
+  saveWindowIdGroupId -> sidebar;
 
   background -> saveBackupMinutes;
   background -> saveEnableBackup;
   background -> saveSidebarButtonsPaddingPx;
   background -> saveTabsBehaviorOnChangeGroup;
   background -> saveUpdatedGroup;
+  background -> saveWindowIdGroupId;
 
   saveDeletedGroup -> background;
   saveUpdatedGroup -> background;
