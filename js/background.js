@@ -417,9 +417,9 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
     if (msg.id === reinitBackupThreadId) {
       await reinitBackupProcess();
     } else if (msg.id === restoreFromBackupId) {
-      await processRestoreBackup(msg.json);
+      await processRestoreBackup(msg.data.json);
     } else if (msg.id === openTabGroupId) {
-      await openGroup(msg.groupId, msg.windowId);
+      await openGroup(msg.data.groupId, msg.data.windowId);
     } else if (msg.id === openFirstGroupId) {
       await closeAllAndOpenFirstGroup();
     }
