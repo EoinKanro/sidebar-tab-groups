@@ -5,11 +5,11 @@ import {
   updateSidebarStyle
 } from "./service/styleUtils.js";
 import {
-  deletedGroupName,
+  deletedGroupName, getWindowIdGroupId,
   saveGroupToEditId,
   saveUpdatedGroup,
   sidebarButtonsPaddingPxName,
-  updatedGroupName
+  updatedGroupName, windowIdGroupIdName
 } from "./data/localStorage.js";
 import {
   focusWindow,
@@ -51,11 +51,23 @@ async function init() {
   initThemeStyle(updateSidebarStyle);
 
   await updateSidebarButtonsPadding(sidebarButtonsPadding);
-  //todo get activeGroupId from database
+  await updateActiveGroupId();
   await reloadGroupButtons();
 }
 
 //----------------------- Document actions --------------------------
+
+async function updateActiveGroupId() {
+  const windowIdGroupId = await getWindowIdGroupId();
+  if (windowIdGroupId !== undefined && windowIdGroupId) {
+    const currentWindow = await getCurrentWindow();
+
+    activeGroupId = windowIdGroupId.get(currentWindow.id);
+    return;
+  }
+
+  activeGroupId = null;
+}
 
 async function reloadGroupButtons() {
   const allGroups = await getAllGroups();
@@ -289,8 +301,11 @@ browser.storage.onChanged.addListener(async (changes, area) => {
     } else if (deletedGroupName in changes) {
       //delete button
       await deleteGroupButton(changes[deletedGroupName].id);
+    } else if (windowIdGroupIdName in changes) {
+      //update active group button
+      await updateActiveGroupId();
+      await updateActiveGroupButton();
     }
-    //todo process open tabs and select active. use database for it. activeGroupId init^
   } catch (e) {
     console.error(e);
   }

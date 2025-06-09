@@ -1,5 +1,6 @@
 import {
   deletedGroupName,
+  deleteWindowIdGroupId,
   getBackupMinutes,
   getEnableBackup,
   getLastBackupTime,
@@ -9,6 +10,7 @@ import {
   saveSidebarButtonsPaddingPx,
   saveTabsBehaviorOnChangeGroup,
   saveUpdatedGroup,
+  saveWindowIdGroupId,
   updatedGroupName
 } from "./data/localStorage.js";
 import {backupGroups} from "./service/backupUtils.js";
@@ -52,6 +54,7 @@ await init();
 async function init() {
   await initDefaultBackupValues();
   await reinitBackupProcess();
+  await deleteWindowIdGroupId();
   await closeAllAndOpenFirstGroup();
   processTabsActionsLoop().then(() => console.log("Background tab processing stopped"));
 }
@@ -107,12 +110,12 @@ async function openGroup(groupId, windowId) {
 
   if (group === undefined || !group) {
     console.error("Can't open group", groupId);
-    return false;
+    return;
   }
 
   if (groupIdWindowId.has(group.id)) {
     await focusWindow(groupIdWindowId.get(group.id));
-    return false;
+    return;
   }
 
   if (windowId === undefined || !windowId) {
@@ -122,7 +125,8 @@ async function openGroup(groupId, windowId) {
   group = await openTabs(group, windowId);
   windowIdGroup.set(windowId, group);
   groupIdWindowId.set(group.id, windowId);
-  return true;
+
+  await saveIdsToLocalStorage();
 }
 
 async function openTabs(group, windowId) {
@@ -291,7 +295,14 @@ async function closeGroup(groupId) {
   groupIdWindowId.delete(groupId);
   windowIdGroup.delete(windowId);
 
+  await saveIdsToLocalStorage();
   await closeWindow(windowId);
+}
+
+async function saveIdsToLocalStorage() {
+  await saveWindowIdGroupId(new Map(
+      [...windowIdGroup].map(([winId, group]) => [winId, group.id])
+  ));
 }
 
 async function processTabsActionsLoop() {
@@ -397,7 +408,7 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
     } else if (msg.id === restoreFromBackupId) {
       await processRestoreBackup(msg.json);
     } else if (msg.id === openTabGroupId) {
-      return Promise.resolve(openGroup(msg.groupId, msg.windowId));
+      await openGroup(msg.groupId, msg.windowId);
     } else if (msg.id === openFirstGroupId) {
       await closeAllAndOpenFirstGroup();
     }

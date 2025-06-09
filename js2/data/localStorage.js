@@ -7,6 +7,7 @@ const lastBackupTimeName = "lastBackupTime";
 export const groupToEditIdName = "groupToEditId";
 export const updatedGroupName = "updatedGroup";
 export const deletedGroupName = "deletedGroup";
+export const windowIdGroupIdName = "windowIdGroupId";
 
 //----------------------- Backup ---------------------------
 export async function saveLastBackupTime(time) {
@@ -34,6 +35,19 @@ export async function saveUpdatedGroup(changes, group) {
 //------------------ Deleted group --------------------
 export async function saveDeletedGroup(groupId) {
   return await saveToLocalStorage(deletedGroupName, new UpdatedTabsGroup(null, groupId));
+}
+
+//---------------- Window Id Group Id -----------------
+export async function saveWindowIdGroupId(idMap) {
+  await saveToLocalStorage(windowIdGroupIdName, idMap);
+}
+
+export async function getWindowIdGroupId() {
+  return await getFromLocalStorage(windowIdGroupIdName);
+}
+
+export async function deleteWindowIdGroupId() {
+  await saveToLocalStorage(windowIdGroupIdName, null);
 }
 
 //----------------------------------------------------------
