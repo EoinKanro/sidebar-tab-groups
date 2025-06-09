@@ -44,7 +44,7 @@ export async function focusWindow(id) {
 }
 
 export async function getCurrentWindow() {
-  await browser.windows.getCurrent();
+  return await browser.windows.getCurrent();
 }
 
 export async function openTab(url, windowId) {

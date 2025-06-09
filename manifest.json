@@ -43,6 +43,7 @@
     "js/data/databaseStorage.js",
     "js/data/localStorage.js",
     "js/data/dataClasses.js",
+    "js/data/backgroundClasses.js",
     "js/service/notifications.js",
     "js/service/styleUtils.js",
     "js/service/commonUtils.js",

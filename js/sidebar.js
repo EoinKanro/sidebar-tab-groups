@@ -62,9 +62,7 @@ async function init() {
 async function updateActiveGroupId() {
   const windowIdGroupId = await getWindowIdGroupId();
   if (windowIdGroupId !== undefined && windowIdGroupId) {
-    const currentWindow = await getCurrentWindow();
-
-    activeGroupId = windowIdGroupId.get(currentWindow.id);
+    activeGroupId = windowIdGroupId.get(currentWindowId);
     return;
   }
 
