@@ -29,10 +29,45 @@ export async function getExtensionPopupWithName(shortUrl) {
   return null;
 }
 
+export async function closeWindow(id) {
+  await browser.windows.remove(id);
+}
+
 export async function focusWindow(id) {
   await browser.windows.update(id, { focused: true });
 }
 
 export async function getCurrentWindow() {
   await browser.windows.getCurrent();
+}
+
+export async function openTab(url, windowId) {
+  return await (browser.tabs.create({
+    url: url,
+    windowId: windowId
+  }));
+}
+
+export async function closeTabs(tabIdOrList) {
+  try {
+    await browser.tabs.remove(tabIdOrList);
+  } catch (e) {
+    console.warn("Can't close tabs", e);
+  }
+}
+
+export async function suspendTabs(tabIdOrList) {
+  try {
+    await browser.tabs.discard(tabIdOrList);
+  } catch (e) {
+    console.warn("Can't suspend tabs", e);
+  }
+}
+
+export async function hideTabs(tabIdOrList) {
+  try {
+    await browser.tabs.hide(tabIdOrList);
+  } catch (e) {
+    console.warn("Can't hide tabs", e);
+  }
 }
