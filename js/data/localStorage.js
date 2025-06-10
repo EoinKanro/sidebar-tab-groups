@@ -58,7 +58,7 @@ const enableBackupName = "enableBackup";
 const backupMinutesName = "backupMinutes";
 const tabsBehaviorOnChangeGroupName = "tabsBehaviorOnChangeGroup";
 export const sidebarButtonsPaddingPxName = "sidebarButtonsPaddingPx";
-export const enableDebugLogsName = "enableLogs";
+export const enableDebugLogsName = "enableDebugLogs";
 
 //---------------------- Backup -----------------------
 export async function getEnableBackup() {
