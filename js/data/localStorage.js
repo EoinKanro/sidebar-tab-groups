@@ -56,8 +56,9 @@ export async function deleteWindowIdGroupId() {
 
 const enableBackupName = "enableBackup";
 const backupMinutesName = "backupMinutes";
+const tabsBehaviorOnChangeGroupName = "tabsBehaviorOnChangeGroup";
 export const sidebarButtonsPaddingPxName = "sidebarButtonsPaddingPx";
-export const tabsBehaviorOnChangeGroup = "tabsBehaviorOnChangeGroup";
+export const enableDebugLogsName = "enableLogs";
 
 //---------------------- Backup -----------------------
 export async function getEnableBackup() {
@@ -87,11 +88,20 @@ export async function saveSidebarButtonsPaddingPx(px) {
 
 //------------------------ Tabs ---------------------------
 export async function getTabsBehaviorOnChangeGroup() {
-  return await getFromLocalStorage(tabsBehaviorOnChangeGroup);
+  return await getFromLocalStorage(tabsBehaviorOnChangeGroupName);
 }
 
 export async function saveTabsBehaviorOnChangeGroup(str) {
-  await saveToLocalStorage(tabsBehaviorOnChangeGroup, str);
+  await saveToLocalStorage(tabsBehaviorOnChangeGroupName, str);
+}
+
+//--------------------- Enable logs ------------------------
+export async function getEnableDebugLogs() {
+  return await getFromLocalStorage(enableDebugLogsName);
+}
+
+export async function saveEnableDebugLogs(bool) {
+  await saveToLocalStorage(enableDebugLogsName, bool);
 }
 
 //----------------------------------------------------------

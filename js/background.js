@@ -3,10 +3,12 @@ import {
   deleteWindowIdGroupId,
   getBackupMinutes,
   getEnableBackup,
+  getEnableDebugLogs,
   getLastBackupTime,
   getTabsBehaviorOnChangeGroup,
   saveBackupMinutes,
   saveEnableBackup,
+  saveEnableDebugLogs,
   saveSidebarButtonsPaddingPx,
   saveTabsBehaviorOnChangeGroup,
   saveUpdatedGroup,
@@ -46,6 +48,7 @@ import {
   RemoveTabAction,
   UpdateTabAction
 } from "./data/backgroundClasses.js";
+import {logInfo} from "./service/logUtils.js";
 
 //-------------------- Temp Data ---------------------
 
@@ -53,6 +56,7 @@ const windowIdGroup = new Map();
 const groupIdWindowId = new Map();
 const tabsActionQueue = new BlockingQueue();
 let backupScheduler;
+let enableLogs;
 
 //------------------ Initialization -------------------
 
@@ -60,6 +64,7 @@ await init();
 
 async function init() {
   await initDefaultBackupValues();
+  await initLogs();
   await reinitBackupProcess();
   await deleteWindowIdGroupId();
   await closeAllAndOpenFirstGroup();
@@ -76,6 +81,14 @@ async function initDefaultBackupValues() {
   await saveBackupMinutes(1440);
   await saveEnableBackup(true);
 }
+
+async function initLogs() {
+  enableLogs = await getEnableDebugLogs();
+  if (enableLogs === undefined) {
+    await saveEnableDebugLogs(false);
+  }
+}
+
 //-------------------- Actions ---------------------
 //----------------- Group Manager ------------------
 async function closeAllAndOpenFirstGroup() {
@@ -232,7 +245,7 @@ function findNotUsedTabByUrl(allTabs, openedTabs, url) {
 
 async function createTab(msg) {
   await updateGroup(msg, (msg, group) => {
-    console.log(`Saving new tab to group: `, msg, group);
+    logInfo(enableLogs, `Saving new tab to group: `, {msg, group});
     group.tabs.splice(msg.index, 0, new Tab(msg.id, msg.url));
   });
 }
@@ -244,7 +257,7 @@ async function updateTab(msg) {
       return;
     }
 
-    console.log(`Updating tab info in group: `, msg, group);
+    logInfo(enableLogs, `Updating tab info in group: `, {msg, group});
     tabToChange.url = msg.url;
   });
 }
@@ -264,7 +277,7 @@ async function moveTab(msg) {
     const fromIndex = group.tabs.indexOf(tab);
     const toIndex = msg.toIndex;
 
-    console.log("Moving tab in group: ", msg, group);
+    logInfo(enableLogs, "Moving tab in group: ", {msg, group});
     group.tabs.splice(fromIndex, 1);
     group.tabs.splice(toIndex, 0, tab);
   });
@@ -272,7 +285,7 @@ async function moveTab(msg) {
 
 async function removeTab(msg) {
   await updateGroup(msg, (msg, group) => {
-    console.log(`Removing tab from group: `, msg, group)
+    logInfo(enableLogs, `Removing tab from group: `, {msg, group});
     group.tabs = group.tabs.filter((tab) => tab.id !== msg.id);
   });
 }
@@ -317,7 +330,7 @@ async function processTabsActionsLoop() {
   while(true) {
     try {
       const msg = await tabsActionQueue.take();
-      console.log("Processing tab message...", msg);
+      logInfo(enableLogs, "Processing tab message...", msg);
 
       if (msg instanceof CreateTabAction) {
         await createTab(msg);
@@ -413,7 +426,7 @@ browser.contextMenus.onHidden.addListener(() => {
 //--------------- Runtime messages -----------------
 browser.runtime.onMessage.addListener(async (msg, sender) => {
   try {
-    console.log("Processing runtime message...", msg);
+    logInfo(enableLogs, "Processing runtime message...", msg);
     if (msg.id === reinitBackupThreadId) {
       await reinitBackupProcess();
     } else if (msg.id === restoreFromBackupId) {
@@ -434,7 +447,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       return;
     }
 
-    console.log("Processing local storage changes...", changes);
+    logInfo(enableLogs, "Processing local storage changes...", changes);
     if (deletedGroupName in changes) {
       //delete group
       const groupChanges = changes[deletedGroupName]?.newValue;
@@ -472,6 +485,9 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       }
 
       await saveGroup(group);
+    } else if (enableLogs in changes) {
+      //logs
+      enableLogs = changes[enableLogs].newValue;
     }
   } catch (e) {
     console.error(e);

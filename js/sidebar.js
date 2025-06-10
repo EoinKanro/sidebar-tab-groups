@@ -6,6 +6,8 @@ import {
 } from "./service/styleUtils.js";
 import {
   deletedGroupName,
+  enableDebugLogsName,
+  getEnableDebugLogs,
   getWindowIdGroupId,
   saveGroupToEditId,
   saveUpdatedGroup,
@@ -21,6 +23,7 @@ import {
 } from "./service/browserUtils.js";
 import {notifyOpenTabGroup} from "./service/notifications.js";
 import {getAllGroups, getGroup} from "./data/databaseStorage.js";
+import {logInfo} from "./service/logUtils.js";
 
 //----------------------- Document elements --------------------------
 
@@ -43,7 +46,8 @@ let movingButtons = false;
 let draggedButton = null;
 
 let activeGroupId;
-let currentWindowId = (await getCurrentWindow()).id;
+let enableLogs = await getEnableDebugLogs();
+const currentWindowId = (await getCurrentWindow()).id;
 
 //----------------------- Initialization --------------------------
 
@@ -286,7 +290,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       return;
     }
 
-    console.log("Processing local storage changes...", changes);
+    logInfo(enableLogs, "Processing local storage changes...", changes)
     if (sidebarButtonsPaddingPxName in changes) {
       //update  style
       await updateSidebarButtonsPadding(sidebarButtonsPadding);
@@ -314,6 +318,9 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       //update active group button
       await updateActiveGroupId();
       await updateActiveGroupButton();
+    } else if (enableDebugLogsName in changes) {
+      //logs
+      enableLogs = changes[enableDebugLogsName].newValue;
     }
   } catch (e) {
     console.error(e);

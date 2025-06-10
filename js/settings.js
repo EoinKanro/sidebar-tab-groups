@@ -5,10 +5,12 @@ import {
 import {
   getBackupMinutes,
   getEnableBackup,
+  getEnableDebugLogs,
   getSidebarButtonsPaddingPx,
   getTabsBehaviorOnChangeGroup,
   saveBackupMinutes,
   saveEnableBackup,
+  saveEnableDebugLogs,
   saveSidebarButtonsPaddingPx,
   saveTabsBehaviorOnChangeGroup
 } from "./data/localStorage.js";
@@ -32,6 +34,8 @@ const restoreText = document.getElementById('restore-text');
 const restoreButton = document.getElementById('restore-button');
 const tabsBehaviorSelect = document.getElementById('tabs-behavior');
 const saveTabsButton = document.getElementById('save-tabs-button');
+const enableLogsCheckbox = document.getElementById('enable-logs');
+const saveDebugButton = document.getElementById('save-debug-button');
 
 // ------------------ Initialization ------------------------
 
@@ -44,6 +48,7 @@ async function init() {
   const isBackup = await getEnableBackup();
   const backupMinutes = await getBackupMinutes();
   const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
+  const isEnableLogs = await getEnableDebugLogs();
 
   //Set data from store
   if (sidebarButtonsPaddingPx) {
@@ -71,6 +76,8 @@ async function init() {
   }
 
   tabsBehaviorSelect.value = selectedTabsBehaviorValue;
+
+  enableLogsCheckbox.checked = isEnableLogs;
 }
 
 //-------------------- Appearance section listeners ----------------------
@@ -155,4 +162,12 @@ restoreButton.onclick = async function () {
 saveTabsButton.onclick = async function () {
   await saveTabsBehaviorOnChangeGroup(tabsBehaviorSelect.value);
   alert("Tabs settings are updated");
+};
+
+//----------------- Debug section listeners -----------------------
+
+//Save debug settings
+saveDebugButton.onclick = async function () {
+  await saveEnableDebugLogs(enableLogsCheckbox.checked);
+  alert("Debug settings are updated");
 };
