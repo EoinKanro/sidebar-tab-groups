@@ -49,6 +49,7 @@
     "js/service/commonUtils.js",
     "js/service/browserUtils.js",
     "js/service/backupUtils.js",
+    "js/service/logUtils.js",
     "html/editGroup.html",
     "html/settings.html",
     "html/tabsManager.html"
