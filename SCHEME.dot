@@ -8,11 +8,13 @@ digraph G {
   saveUpdatedGroup [ shape=house ];
   saveGroupToEditId [ shape=house ];
   saveWindowIdGroupId [ shape=house ];
+  saveEnableDebugLogs [ shape=house ];
 
   settings -> saveSidebarButtonsPaddingPx;
   settings -> saveEnableBackup;
   settings -> saveBackupMinutes;
   settings -> saveTabsBehaviorOnChangeGroup;
+  settings -> saveEnableDebugLogs;
 
   settings -> background [ label = notifyReinitBackupThread ];
   settings -> background [ label = notifyRestoreFromBackup ];
@@ -36,6 +38,7 @@ digraph G {
   saveDeletedGroup -> sidebar;
   saveSidebarButtonsPaddingPx -> sidebar;
   saveWindowIdGroupId -> sidebar;
+  saveEnableDebugLogs -> sidebar;
 
   background -> saveBackupMinutes;
   background -> saveEnableBackup;
@@ -46,4 +49,5 @@ digraph G {
 
   saveDeletedGroup -> background;
   saveUpdatedGroup -> background;
+  saveEnableDebugLogs -> background;
 }
