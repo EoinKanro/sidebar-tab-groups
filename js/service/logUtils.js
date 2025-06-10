@@ -1,7 +1,14 @@
 
-export function logInfo(enabled, message, args = null) {
-  if (!enabled) {
-    return;
+export class Logger {
+  constructor(enabled, source) {
+    this.enabled = enabled;
+    this.source = source;
   }
-  console.log(message, args);
+
+  logInfo(message, args = null) {
+    if (!this.enabled) {
+      return;
+    }
+    console.log(message, this.source, args);
+  }
 }

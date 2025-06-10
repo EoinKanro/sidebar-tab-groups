@@ -169,5 +169,5 @@ saveTabsButton.onclick = async function () {
 //Save debug settings
 saveDebugButton.onclick = async function () {
   await saveEnableDebugLogs(enableLogsCheckbox.checked);
-  alert("Debug settings are updated");
+  alert("Debug settings are updated\nSome changes may start working only after extension restart");
 };

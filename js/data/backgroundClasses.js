@@ -17,8 +17,6 @@ export class BlockingQueue {
   }
 
   add(msg) {
-    console.log("Adding msg to queue...", msg);
-
     if (this.resolvers.length > 0) {
       //Get resolve and send message
       const resolve = this.resolvers.shift();

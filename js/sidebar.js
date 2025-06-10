@@ -23,7 +23,7 @@ import {
 } from "./service/browserUtils.js";
 import {notifyOpenTabGroup} from "./service/notifications.js";
 import {getAllGroups, getGroup} from "./data/databaseStorage.js";
-import {logInfo} from "./service/logUtils.js";
+import {Logger} from "./service/logUtils.js";
 
 //----------------------- Document elements --------------------------
 
@@ -46,7 +46,7 @@ let movingButtons = false;
 let draggedButton = null;
 
 let activeGroupId;
-let enableLogs = await getEnableDebugLogs();
+const logger = new Logger(await getEnableDebugLogs(), "sidebar");
 const currentWindowId = (await getCurrentWindow()).id;
 
 //----------------------- Initialization --------------------------
@@ -251,7 +251,7 @@ function updateTabGroupsButtonsDraggable(draggable) {
 async function openGroupEditor(groupId) {
   await saveGroupToEditId(groupId);
 
-  let popup = getExtensionPopupWithName("html/editGroup.html");
+  let popup = await getExtensionPopupWithName("html/editGroup.html");
   if (popup) {
     await focusWindow(popup.id);
   } else {
@@ -290,7 +290,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       return;
     }
 
-    logInfo(enableLogs, "Processing local storage changes...", changes)
+    logger.logInfo("Processing local storage changes...", changes)
     if (sidebarButtonsPaddingPxName in changes) {
       //update  style
       await updateSidebarButtonsPadding(sidebarButtonsPadding);
@@ -320,7 +320,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       await updateActiveGroupButton();
     } else if (enableDebugLogsName in changes) {
       //logs
-      enableLogs = changes[enableDebugLogsName].newValue;
+      logger.enabled = changes[enableDebugLogsName].newValue;
     }
   } catch (e) {
     console.error(e);

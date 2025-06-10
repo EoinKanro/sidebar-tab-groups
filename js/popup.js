@@ -24,16 +24,16 @@ openSidebarButton.onclick = function () {
 };
 
 settingsButton.onclick = async function () {
-  let popup = getExtensionPopupWithName("html/settings.html");
+  let popup = await getExtensionPopupWithName("html/settings.html");
   if (popup) {
     await focusWindow(popup.id);
   } else {
-    await openPopup("../html/settings.html", 0.6, 0.5);
+    await openPopup("../html/settings.html", 0.4, 0.7);
   }
 };
 
 tabsManagerButton.onclick = async function () {
-  let popup = getExtensionPopupWithName("html/tabsManager.html");
+  let popup = await getExtensionPopupWithName("html/tabsManager.html");
   if (popup) {
     await focusWindow(popup.id);
   } else {

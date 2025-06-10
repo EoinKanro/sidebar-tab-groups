@@ -1,6 +1,7 @@
 import {
   deletedGroupName,
   deleteWindowIdGroupId,
+  enableDebugLogsName,
   getBackupMinutes,
   getEnableBackup,
   getEnableDebugLogs,
@@ -48,7 +49,7 @@ import {
   RemoveTabAction,
   UpdateTabAction
 } from "./data/backgroundClasses.js";
-import {logInfo} from "./service/logUtils.js";
+import {Logger} from "./service/logUtils.js";
 
 //-------------------- Temp Data ---------------------
 
@@ -56,7 +57,7 @@ const windowIdGroup = new Map();
 const groupIdWindowId = new Map();
 const tabsActionQueue = new BlockingQueue();
 let backupScheduler;
-let enableLogs;
+let logger;
 
 //------------------ Initialization -------------------
 
@@ -83,10 +84,12 @@ async function initDefaultBackupValues() {
 }
 
 async function initLogs() {
-  enableLogs = await getEnableDebugLogs();
+  let enableLogs = await getEnableDebugLogs();
   if (enableLogs === undefined) {
+    enableLogs = false;
     await saveEnableDebugLogs(false);
   }
+  logger = new Logger(enableLogs, "background");
 }
 
 //-------------------- Actions ---------------------
@@ -245,7 +248,7 @@ function findNotUsedTabByUrl(allTabs, openedTabs, url) {
 
 async function createTab(msg) {
   await updateGroup(msg, (msg, group) => {
-    logInfo(enableLogs, `Saving new tab to group: `, {msg, group});
+    logger.logInfo(`Saving new tab to group: `, [msg, group]);
     group.tabs.splice(msg.index, 0, new Tab(msg.id, msg.url));
   });
 }
@@ -257,7 +260,7 @@ async function updateTab(msg) {
       return;
     }
 
-    logInfo(enableLogs, `Updating tab info in group: `, {msg, group});
+    logger.logInfo(`Updating tab info in group: `, [msg, group]);
     tabToChange.url = msg.url;
   });
 }
@@ -277,7 +280,7 @@ async function moveTab(msg) {
     const fromIndex = group.tabs.indexOf(tab);
     const toIndex = msg.toIndex;
 
-    logInfo(enableLogs, "Moving tab in group: ", {msg, group});
+    logger.logInfo( "Moving tab in group: ", [msg, group]);
     group.tabs.splice(fromIndex, 1);
     group.tabs.splice(toIndex, 0, tab);
   });
@@ -285,7 +288,7 @@ async function moveTab(msg) {
 
 async function removeTab(msg) {
   await updateGroup(msg, (msg, group) => {
-    logInfo(enableLogs, `Removing tab from group: `, {msg, group});
+    logger.logInfo( `Removing tab from group: `, [msg, group]);
     group.tabs = group.tabs.filter((tab) => tab.id !== msg.id);
   });
 }
@@ -330,7 +333,7 @@ async function processTabsActionsLoop() {
   while(true) {
     try {
       const msg = await tabsActionQueue.take();
-      logInfo(enableLogs, "Processing tab message...", msg);
+      logger.logInfo( "Processing tab message...", msg);
 
       if (msg instanceof CreateTabAction) {
         await createTab(msg);
@@ -426,7 +429,7 @@ browser.contextMenus.onHidden.addListener(() => {
 //--------------- Runtime messages -----------------
 browser.runtime.onMessage.addListener(async (msg, sender) => {
   try {
-    logInfo(enableLogs, "Processing runtime message...", msg);
+    logger.logInfo( "Processing runtime message...", msg);
     if (msg.id === reinitBackupThreadId) {
       await reinitBackupProcess();
     } else if (msg.id === restoreFromBackupId) {
@@ -447,7 +450,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       return;
     }
 
-    logInfo(enableLogs, "Processing local storage changes...", changes);
+    logger.logInfo( "Processing local storage changes...", changes);
     if (deletedGroupName in changes) {
       //delete group
       const groupChanges = changes[deletedGroupName]?.newValue;
@@ -485,9 +488,9 @@ browser.storage.onChanged.addListener(async (changes, area) => {
       }
 
       await saveGroup(group);
-    } else if (enableLogs in changes) {
+    } else if (enableDebugLogsName in changes) {
       //logs
-      enableLogs = changes[enableLogs].newValue;
+      logger.enabled = changes[enableDebugLogsName].newValue;
     }
   } catch (e) {
     console.error(e);

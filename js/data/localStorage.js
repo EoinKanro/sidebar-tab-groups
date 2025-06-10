@@ -109,12 +109,10 @@ export async function saveEnableDebugLogs(bool) {
 //----------------------------------------------------------
 
 async function getFromLocalStorage(key) {
-  console.log(`Getting ${key} from local storage...`);
   return (await browser.storage.local.get(key))[key];
 }
 
 async function saveToLocalStorage(key, value) {
-  console.log(`Saving ${key} to local storage...`, value);
   await browser.storage.local.set({ [key]: value });
 }
 

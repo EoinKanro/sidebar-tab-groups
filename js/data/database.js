@@ -1,12 +1,16 @@
+import {getEnableDebugLogs} from "./localStorage.js";
+import {Logger} from "../service/logUtils.js";
+
 export const tabGroupsName = "tab-groups";
 
 let db;
+const logger = new Logger(await getEnableDebugLogs(), "database");
 
 /**
  * @returns {Promise<unknown>} array/null
  */
 export function getAllData(storeName) {
-    console.log(`Getting all from ${storeName}`)
+    logger.logInfo( `Getting all from ${storeName}`);
 
     return new Promise(async (resolve) => {
         try {
@@ -17,12 +21,12 @@ export function getAllData(storeName) {
             const requestDb = store.getAll();
 
             requestDb.onsuccess = function(event) {
-                console.log(`Got all successfully: `, event.target.result)
+                logger.logInfo( `Got all successfully: `, event.target.result);
                 resolve(event.target.result);
             };
 
             requestDb.onerror = function(event) {
-                console.log(`Got all with error: `, event)
+                logger.logInfo( `Got all with error: `, event);
                 resolve(null);
             };
         } catch (e) {
@@ -35,7 +39,7 @@ export function getAllData(storeName) {
  * @returns {Promise<unknown>} true/false
  */
 export function deleteAllData(storeName) {
-    console.log(`Deleting all from ${storeName}`)
+    logger.logInfo( `Deleting all from ${storeName}`);
 
     return new Promise(async (resolve) => {
         try {
@@ -46,12 +50,13 @@ export function deleteAllData(storeName) {
             const requestDb = store.clear();
 
             requestDb.onsuccess = function(event) {
-                console.log(`Delete all successfully: `, event.target.result)
+                logger.logInfo( `Delete all successfully: `, event.target.result);
                 resolve(true);
             };
 
             requestDb.onerror = function(event) {
-                console.log(`Delete all with error: `, event)
+                logger.logInfo( `Delete all with error: `, event);
+
                 resolve(false);
             };
         } catch (e) {
@@ -64,7 +69,7 @@ export function deleteAllData(storeName) {
  * @returns {Promise<unknown>} obj/null
  */
 export function getData(storeName, key) {
-    console.log(`Getting data ${key} from ${storeName}`)
+    logger.logInfo( `Getting data ${key} from ${storeName}`);
 
     return new Promise(async (resolve, reject) => {
         try {
@@ -74,11 +79,11 @@ export function getData(storeName, key) {
 
             const requestDb = store.get(key);
             requestDb.onsuccess = function (event) {
-                console.log(`Got successfully: `, key, event.target.result);
+                logger.logInfo( `Got successfully: `, [key, event.target.result]);
                 resolve(event.target.result || null);
             };
             requestDb.onerror = function (event) {
-                console.log(`Got with error. `, key, event);
+                logger.logInfo( `Got with error. `, [key, event]);
                 resolve(null);
             };
         } catch (e) {
@@ -91,7 +96,7 @@ export function getData(storeName, key) {
  * @returns {Promise<unknown>} true/false
  */
 export function saveData(storeName, data) {
-    console.log(`Saving data in ${storeName}`, data)
+    logger.logInfo( `Saving data in ${storeName}`, data);
 
     return new Promise(async (resolve) => {
         try {
@@ -101,11 +106,11 @@ export function saveData(storeName, data) {
 
             const requestDb = store.put(data);
             requestDb.onsuccess = function (event) {
-                console.log(`Saved successfully: `, data);
+                logger.logInfo( `Saved successfully: `, data);
                 resolve(true);
             };
             requestDb.onerror = function (event) {
-                console.log(`Saved with error. `, data, event);
+                logger.logInfo( `Saved with error. `, [data, event]);
                 resolve(false);
             };
         } catch (e) {
@@ -118,7 +123,7 @@ export function saveData(storeName, data) {
  * @returns {Promise<unknown>} true/false
  */
 export function deleteData(storeName, key) {
-    console.log(`Deleting ${key} from ${storeName}`)
+    logger.logInfo( `Deleting ${key} from ${storeName}`);
 
     return new Promise(async (resolve) => {
         try {
@@ -128,11 +133,11 @@ export function deleteData(storeName, key) {
 
             const requestDb = store.delete(key);
             requestDb.onsuccess = function (event) {
-                console.log(`Deleted successfully: `, key);
+                logger.logInfo( `Deleted successfully: `, key);
                 resolve(true);
             };
             requestDb.onerror = function (event) {
-                console.log(`Got data with error.`, key, event);
+                logger.logInfo( `Got data with error.`, [key, event]);
                 resolve(false);
             };
         } catch (e) {
