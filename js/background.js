@@ -53,6 +53,7 @@ import {Logger} from "./service/logUtils.js";
 
 //-------------------- Temp Data ---------------------
 
+//todo bug on change group. it doesnt let you change it in the same window
 const windowIdGroup = new Map();
 const groupIdWindowId = new Map();
 const tabsActionQueue = new BlockingQueue();
@@ -144,6 +145,14 @@ async function openGroup(groupId, windowId) {
 
   if (windowId === undefined || !windowId) {
     windowId = (await openEmptyWindow()).id;
+  }
+
+  //clear data for listener
+  windowIdGroup.delete(windowId);
+  for (const [gId, wId] of groupIdWindowId) {
+    if (wId === windowId) {
+      groupIdWindowId.delete(gId);
+    }
   }
 
   group = await openTabs(group, windowId);
@@ -408,6 +417,7 @@ async function processRestoreBackup(json) {
   await saveSetting(json.backupMinutes, async () => await saveBackupMinutes(Number(json.backupMinutes)));
   await saveSetting(json.sidebarButtonsPaddingPx, async () => await saveSidebarButtonsPaddingPx(Number(json.sidebarButtonsPaddingPx)));
   await saveSetting(json.tabsBehaviorOnChangeGroup, async () => await saveTabsBehaviorOnChangeGroup(json.tabsBehaviorOnChangeGroup));
+  await saveSetting(json.enableDebugLogs, async () => await saveEnableDebugLogs(json.enableDebugLogs));
 
   await reinitBackupProcess();
 

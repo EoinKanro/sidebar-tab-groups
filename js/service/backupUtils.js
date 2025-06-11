@@ -2,8 +2,10 @@ import {getAllGroups} from "../data/databaseStorage.js";
 import {
   getBackupMinutes,
   getEnableBackup,
+  getEnableDebugLogs,
   getSidebarButtonsPaddingPx,
-  getTabsBehaviorOnChangeGroup, saveLastBackupTime
+  getTabsBehaviorOnChangeGroup,
+  saveLastBackupTime
 } from "../data/localStorage.js";
 
 export async function backupGroups() {
@@ -13,13 +15,15 @@ export async function backupGroups() {
   const backupMinutes = await getBackupMinutes();
   const sidebarButtonsPaddingPx = await getSidebarButtonsPaddingPx();
   const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
+  const enableDebugLogs = await getEnableDebugLogs();
 
   const result = {
     allGroups: allGroups,
     enableBackup: enableBackup,
     backupMinutes: backupMinutes,
     sidebarButtonsPaddingPx: sidebarButtonsPaddingPx,
-    tabsBehaviorOnChangeGroup: tabsBehaviorOnChangeGroup
+    tabsBehaviorOnChangeGroup: tabsBehaviorOnChangeGroup,
+    enableDebugLogs: enableDebugLogs
   }
 
   const blob = new Blob([JSON.stringify(result)], {type: 'text/plain'});
