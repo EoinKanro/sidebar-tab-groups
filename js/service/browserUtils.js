@@ -31,7 +31,8 @@ export async function getExtensionPopupWithName(shortUrl) {
 
 export async function openEmptyWindow() {
   return await browser.windows.create({
-    type: 'normal'
+    type: 'normal',
+    state: 'maximized'
   });
 }
 
