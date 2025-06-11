@@ -1,417 +1,602 @@
 import {
-    backgroundId,
-    EditGroupActiveGroupChangedEvent,
-    notify,
-    notifyBackgroundActiveGroupDeleted,
-    notifyBackgroundActiveGroupUpdated,
-    notifyBackgroundOpenFirstGroupTabs,
-    notifyBackgroundReinitBackup,
-    notifyBackgroundOpenTabs,
-    SidebarUpdateActiveGroupButtonEvent,
-    notifyBackgroundRestoreBackup,
-    SidebarReloadGroupButtonsEvent,
-    SidebarUpdateButtonsPadding, TabsManagerReloadGroupsEvent
-} from "./service/events.js";
-import {
-    deleteActiveGroupId,
-    deleteActiveWindowId,
-    deleteGroupToEditId,
-    getBackupMinutes,
-    getEnableBackup,
-    getLastBackupTime,
-    saveActiveGroupId,
-    saveActiveWindowId,
-    saveBackupMinutes,
-    saveEnableBackup,
-    saveSidebarButtonsPaddingPx,
-    saveTabsBehaviorOnChangeGroup
+  deletedGroupName,
+  deleteWindowIdGroupId,
+  enableDebugLogsName,
+  getBackupMinutes,
+  getEnableBackup,
+  getEnableDebugLogs,
+  getLastBackupTime,
+  getTabsBehaviorOnChangeGroup,
+  saveBackupMinutes,
+  saveEnableBackup,
+  saveEnableDebugLogs,
+  saveSidebarButtonsPaddingPx,
+  saveTabsBehaviorOnChangeGroup,
+  saveUpdatedGroup,
+  saveWindowIdGroupId,
+  updatedGroupName
 } from "./data/localStorage.js";
-import {Tab} from "./data/tabs.js";
-import {deleteAllGroups, getAllGroups, saveGroup} from "./data/databaseStorage.js";
-import {backupGroups, getLatestWindow, isUrlEmpty, openTabs} from "./service/utils.js";
+import {backupGroups} from "./service/backupUtils.js";
+import {
+  closeTabs,
+  closeWindow,
+  focusWindow,
+  getAllOpenedTabs,
+  hideTabs,
+  openEmptyWindow,
+  openTab,
+  suspendTabs
+} from "./service/browserUtils.js";
+import {isUrlEmpty} from "./service/commonUtils.js";
+import {Tab, TABS_BEHAVIOR} from "./data/dataClasses.js";
+import {
+  deleteAllGroups,
+  deleteGroup,
+  getAllGroups,
+  getGroup,
+  saveGroup
+} from "./data/databaseStorage.js";
+import {
+  openFirstGroupId,
+  openTabGroupId,
+  reinitBackupThreadId,
+  restoreFromBackupId
+} from "./service/notifications.js";
+import {
+  BlockingQueue,
+  CreateTabAction,
+  MoveTabAction,
+  RemoveTabAction,
+  UpdateTabAction
+} from "./data/backgroundClasses.js";
+import {Logger} from "./service/logUtils.js";
 
-/**
- * Responsible for:
- * - any tabs manipulations. active group saves only here
- * - backup
- * - removing context elements
- */
+//-------------------- Temp Data ---------------------
 
-let activeGroup;
-let backupInterval;
+//todo bug on change group. it doesnt let you change it in the same window
+const windowIdGroup = new Map();
+const groupIdWindowId = new Map();
+const tabsActionQueue = new BlockingQueue();
+let backupScheduler;
+let logger;
 
-//---------------------------- Init ---------------------------
-await cleanTempData();
-await saveActiveWindowId((await getLatestWindow()).id);
-await openFirstGroup();
-await initDefaultBackupValues();
-await cleanInitBackupInterval();
+//------------------ Initialization -------------------
 
-async function cleanTempData() {
-    await deleteActiveGroupId();
-    await deleteActiveWindowId();
-    await deleteGroupToEditId();
+await init();
+
+async function init() {
+  await initDefaultBackupValues();
+  await initLogs();
+  await reinitBackupProcess();
+  await deleteWindowIdGroupId();
+  await closeAllAndOpenFirstGroup();
+  processTabsActionsLoop().then(() => console.log("Background tab processing stopped"));
 }
 
 //init on install
 async function initDefaultBackupValues() {
-    const backupMinutes = await getBackupMinutes();
-    if (backupMinutes) {
-        return;
-    }
+  const backupMinutes = await getBackupMinutes();
+  if (backupMinutes) {
+    return;
+  }
 
-    await saveBackupMinutes(1440);
-    await saveEnableBackup(true);
+  await saveBackupMinutes(1440);
+  await saveEnableBackup(true);
 }
 
-//------------------------- Runtime messages listener --------------------------------
+async function initLogs() {
+  let enableLogs = await getEnableDebugLogs();
+  if (enableLogs === undefined) {
+    enableLogs = false;
+    await saveEnableDebugLogs(false);
+  }
+  logger = new Logger(enableLogs, "background");
+}
 
-browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
+//-------------------- Actions ---------------------
+//----------------- Group Manager ------------------
+async function closeAllAndOpenFirstGroup() {
+  console.log("Closing all windows and open first group...");
+  const currentWindows = await browser.windows.getAll({
+    populate: false
+  });
+
+  windowIdGroup.clear();
+  groupIdWindowId.clear();
+
+  const allGroups = await getAllGroups();
+  if (!allGroups) {
+    await openEmptyWindow();
+    await closeWindows(currentWindows);
+    return;
+  }
+
+  if (allGroups.length <= 0) {
+    return;
+  }
+
+  const firstGroup = allGroups.reduce((lowest, current) => {
+    return current.index < lowest.index ? current : lowest;
+  }, allGroups[0]);
+
+  await openGroup(firstGroup.id, null);
+  await closeWindows(currentWindows);
+}
+
+async function closeWindows(windows) {
+  for (let win of windows) {
+    await closeWindow(win.id);
+  }
+}
+
+async function openGroup(groupId, windowId) {
+  console.log("Opening group...", groupId);
+  let group = await getGroup(groupId);
+
+  if (group === undefined || !group) {
+    console.error("Can't open group", groupId);
+    return;
+  }
+
+  if (groupIdWindowId.has(group.id)) {
+    await focusWindow(groupIdWindowId.get(group.id));
+    return;
+  }
+
+  if (windowId === undefined || !windowId) {
+    windowId = (await openEmptyWindow()).id;
+  }
+
+  //clear data for listener
+  windowIdGroup.delete(windowId);
+  for (const [gId, wId] of groupIdWindowId) {
+    if (wId === windowId) {
+      groupIdWindowId.delete(gId);
+    }
+  }
+
+  group = await openTabs(group, windowId);
+  windowIdGroup.set(windowId, group);
+  groupIdWindowId.set(group.id, windowId);
+
+  await saveIdsToLocalStorage();
+}
+
+async function openTabs(group, windowId) {
+  console.log("Opening tabs...", group.id)
+  let allTabs = await getAllOpenedTabs();
+  if (allTabs === undefined || !allTabs) {
+    allTabs = [];
+  }
+
+  //open all tabs from group
+  const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
+  const openedTabs = await openTabsAndGetOpened(allTabs, windowId, group.tabs, tabsBehaviorOnChangeGroup);
+  const openedIds = openedTabs.map(tab => tab.id);
+
+  //show openedTabs
+  await browser.tabs.show(openedIds);
+  //set last active
+  await browser.tabs.update(openedIds[openedIds.length - 1], { active: true });
+  //sort
+  for (let i = 0; i < openedIds.length; i++) {
+    await browser.tabs.move(openedIds[i], { index: i });
+  }
+
+  group.windowId = windowId;
+  //update group after possible errors
+  group.tabs = openedTabs;
+
+  //close or hide old tabs
+  const tabsIdsToClose = allTabs
+    .filter(tab => tab.windowId === windowId && !openedIds.includes(tab.id))
+    .map(tab => tab.id);
+
+  if (tabsBehaviorOnChangeGroup === TABS_BEHAVIOR.CLOSE) {
+    await closeTabs(tabsIdsToClose);
+  } else {
+    if (tabsBehaviorOnChangeGroup === TABS_BEHAVIOR.SUSPEND) {
+      await suspendTabs(tabsIdsToClose);
+    }
+    await hideTabs(tabsIdsToClose);
+  }
+
+  return group;
+}
+
+async function openTabsAndGetOpened(allTabs, windowId, tabsToOpen, tabsBehaviorOnChangeGroup) {
+  const openedTabs = [];
+  for (const tab of tabsToOpen) {
     try {
-        if (!message.target.includes(backgroundId)) {
-            return;
-        }
+      //crunch
+      if (tab === undefined || !tab || isUrlEmpty(tab.url)) {
+        continue;
+      }
 
-        if (message.actionId === notifyBackgroundOpenTabs) {
-            await processOpenTabs(message.groupId);
-        } else if (message.actionId === notifyBackgroundOpenFirstGroupTabs) {
-            await openFirstGroup();
-        } else if (message.actionId === notifyBackgroundActiveGroupUpdated) {
-            await processUpdateActiveGroup(message.group);
-        } else if (message.actionId === notifyBackgroundActiveGroupDeleted) {
-            activeGroup = null;
-        } else if (message.actionId === notifyBackgroundReinitBackup) {
-            await cleanInitBackupInterval();
-        } else if (message.actionId === notifyBackgroundRestoreBackup) {
-            await processRestoreBackup(message.json);
+      const url = tab.url;
+
+      //try to find tab with the same url
+      let browserTab;
+      if (tabsBehaviorOnChangeGroup !== TABS_BEHAVIOR.CLOSE) {
+        browserTab = findNotUsedTabByUrl(allTabs, openedTabs, url);
+      }
+
+      if (browserTab !== undefined && browserTab) {
+        //update window id
+        if (browserTab.windowId !== windowId) {
+          await browser.tabs.move(browserTab.id, {
+            windowId: windowId,
+            index: -1
+          });
         }
+      } else {
+        //create new tab
+        browserTab = await openTab(url, windowId);
+      }
+
+      tab.id = browserTab.id;
+      openedTabs.push(tab);
     } catch (e) {
-        console.error(e);
+      console.error(`Can't open tab: ${tab}`, e);
     }
-})
-
-async function processOpenTabs(groupId) {
-    const previousActiveGroup = activeGroup;
-
-    activeGroup = null;
-    try {
-        activeGroup = await openTabs(groupId);
-    } catch (e) {
-        console.error("Can't open group ", groupId)
-    }
-
-    if (!activeGroup) {
-        activeGroup = previousActiveGroup;
-    } else {
-        await save();
-    }
-
-    if (activeGroup) {
-        await saveActiveGroupId(activeGroup.id);
-    }
-    notify(new EditGroupActiveGroupChangedEvent());
-    notify(new SidebarReloadGroupButtonsEvent());
+  }
+  return openedTabs;
 }
 
-async function openFirstGroup() {
-    const allGroups = await getAllGroups();
-    if (allGroups && allGroups.length > 0) {
-        const firstGroup = allGroups.reduce((lowest, current) => {
-            return current.index < lowest.index ? current : lowest;
-        }, allGroups[0]);
-        await processOpenTabs(firstGroup.id);
-    } else {
-        await saveActiveGroupId(null);
-        notify(new EditGroupActiveGroupChangedEvent());
-        notify(new SidebarReloadGroupButtonsEvent());
-    }
-}
+//find tab in all tabs that doesn't have the id from openedTabs to reuse
+function findNotUsedTabByUrl(allTabs, openedTabs, url) {
+  const hiddenBrowserTabsWithSameUrl = allTabs.filter(tab => tab.hidden && tab.url === url);
 
-async function processUpdateActiveGroup(group) {
-    if (activeGroup) {
-        activeGroup.name = group.name;
-        activeGroup.icon = group.icon;
-        activeGroup.index = group.index;
-        await save();
-    } else {
-        activeGroup = group;
-        await saveActiveGroupId(group.id);
-        notify(new SidebarUpdateActiveGroupButtonEvent());
-    }
-}
-
-//set schedule backup task
-async function cleanInitBackupInterval() {
-    const enableBackup = await getEnableBackup();
-    const backupMinutes = await getBackupMinutes();
-
-    if (backupInterval) {
-        clearInterval(backupInterval);
-    }
-
-    if (!enableBackup) {
-        console.log("Backup turned off");
-        return
-    }
-
-    if (backupMinutes) {
-        console.log(`Starting backup every ${backupMinutes} minutes`);
-        backupInterval = setInterval(backupGroupsWithCheck, backupMinutes * 60 * 1000);
-        await backupGroupsWithCheck();
-    } else {
-        console.log("Can't start backup with empty minutes");
-    }
-}
-
-async function backupGroupsWithCheck() {
-    const lastBackupTime = await getLastBackupTime();
-    const now = new Date().getTime();
-
-    if (!lastBackupTime) {
-        await backupGroups();
-        return;
-    }
-
-    const diff = (now - lastBackupTime) / 1000 / 60;
-    const backupMinutes = await getBackupMinutes();
-
-    if (diff >= backupMinutes || backupMinutes - diff < 0.1) {
-        await backupGroups();
-    }
-}
-
-async function processRestoreBackup(json) {
-    await backupGroups();
-
-    await deleteAllGroups();
-    await cleanTempData();
-
-    for (const item of json.allGroups) {
-        await saveGroup(item);
-    }
-
-    await openFirstGroup();
-
-    try {
-        await saveSetting(json.enableBackup, async () => await saveEnableBackup(json.enableBackup));
-        await saveSetting(json.backupMinutes, async () => await saveBackupMinutes(Number(json.backupMinutes)));
-        await saveSetting(json.sidebarButtonsPaddingPx, async () => await saveSidebarButtonsPaddingPx(Number(json.sidebarButtonsPaddingPx)));
-        await saveSetting(json.tabsBehaviorOnChangeGroup, async () => await saveTabsBehaviorOnChangeGroup(json.tabsBehaviorOnChangeGroup));
-
-        await cleanInitBackupInterval();
-        notify(new SidebarUpdateButtonsPadding());
-    } catch (e) {
-        console.warn("Can't restore settings", json);
-    }
-}
-
-async function saveSetting(param, saveFunction) {
-    if (param !== undefined && param !== null) {
-        await saveFunction();
-    }
-}
-
-//----------------------- Tabs CUD listeners ------------------------
-
-class BlockingQueue {
-    constructor() {
-        this.queue = [];
-        this.resolvers = [];
-    }
-
-    take() {
-        if (this.queue.length > 0) {
-            return Promise.resolve(this.queue.shift());
-        } else {
-            //Save resolve and wait for message
-            return new Promise((resolve) => {
-                this.resolvers.push(resolve);
-            });
-        }
-    }
-
-    add(msg) {
-        console.log("Adding msg to queue...", msg);
-
-        if (this.resolvers.length > 0) {
-            //Get resolve and send message
-            const resolve = this.resolvers.shift();
-            resolve(msg);
-        } else {
-            this.queue.push(msg);
-        }
-    }
-}
-
-class TabAction {
-    constructor(groupId) {
-        this.groupId = groupId;
-    }
-}
-
-class CreateTabAction extends TabAction{
-    constructor(groupId, index, id, url) {
-        super(groupId);
-        this.index = index;
-        this.id = id;
-        this.url = url;
-    }
-}
-
-class UpdateTabAction extends TabAction{
-    constructor(groupId, id, url) {
-        super(groupId);
-        this.id = id;
-        this.url = url;
-    }
-}
-
-class MoveTabAction extends TabAction{
-    constructor(groupId, id, toIndex) {
-        super(groupId);
-        this.id = id;
-        this.toIndex = toIndex;
-    }
-}
-
-class RemoveTabAction extends TabAction{
-    constructor(groupId, id) {
-        super(groupId);
-        this.id = id;
-    }
-}
-
-async function processTabsActions() {
-    while(true) {
-        try {
-            const msg = await tabsActionQueue.take();
-
-            if (msg.groupId !== activeGroup.id) {
-                console.warn("Message is too old, skipping: ", msg);
-                continue;
-            }
-
-            if (msg instanceof CreateTabAction) {
-                await createTab(msg);
-            } else if (msg instanceof UpdateTabAction) {
-                await updateTab(msg);
-            } else if (msg instanceof MoveTabAction) {
-                await moveTab(msg);
-            } else if (msg instanceof RemoveTabAction) {
-                await removeTab(msg);
-            } else {
-                console.warn("Can't process message", msg);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
+  if (hiddenBrowserTabsWithSameUrl && hiddenBrowserTabsWithSameUrl.length > 0) {
+    return hiddenBrowserTabsWithSameUrl.find(browserTab =>
+        !openedTabs.some(tab => tab.id === browserTab.id)
+    );
+  }
+  return null;
 }
 
 async function createTab(msg) {
-    console.log(`Saving new tab to current group: `, msg, activeGroup);
-    activeGroup.tabs.splice(msg.index, 0, new Tab(msg.id, msg.url));
-    await save();
+  await updateGroup(msg, (msg, group) => {
+    logger.logInfo(`Saving new tab to group: `, [msg, group]);
+    group.tabs.splice(msg.index, 0, new Tab(msg.id, msg.url));
+  });
 }
 
 async function updateTab(msg) {
-    const tabToChange = activeGroup.tabs.find(tabF => tabF.id === msg.id);
+  await updateGroup(msg, (msg, group) => {
+    const tabToChange = group.tabs.find(tabF => tabF.id === msg.id);
     if (tabToChange === undefined || !tabToChange || tabToChange.url === msg.url) {
-        return
+      return;
     }
 
-    console.log(`Updating tab info in current group: `, msg, activeGroup);
+    logger.logInfo(`Updating tab info in group: `, [msg, group]);
     tabToChange.url = msg.url;
-    await save();
+  });
 }
 
 async function moveTab(msg) {
-    if (activeGroup.tabs.length < msg.toIndex) {
-        return;
+  await updateGroup(msg, (msg, group) => {
+    if (group.tabs.length < msg.toIndex) {
+      return;
     }
 
-    const tab = activeGroup.tabs.find(tabF => tabF.id === msg.id);
+    const tab = group.tabs.find(tabF => tabF.id === msg.id);
 
     if (tab === undefined || !tab) {
-        return;
+      return;
     }
 
-    const fromIndex = activeGroup.tabs.indexOf(tab);
+    const fromIndex = group.tabs.indexOf(tab);
     const toIndex = msg.toIndex;
 
-    console.log("Moving tab in current group: ", msg, activeGroup);
-    activeGroup.tabs.splice(fromIndex, 1);
-    activeGroup.tabs.splice(toIndex, 0, tab);
-    await save();
+    logger.logInfo( "Moving tab in group: ", [msg, group]);
+    group.tabs.splice(fromIndex, 1);
+    group.tabs.splice(toIndex, 0, tab);
+  });
 }
 
 async function removeTab(msg) {
-    console.log(`Removing tab from current group: `, msg, activeGroup)
-    activeGroup.tabs = activeGroup.tabs.filter((tab) => tab.id !== msg.id);
-    await save();
+  await updateGroup(msg, (msg, group) => {
+    logger.logInfo( `Removing tab from group: `, [msg, group]);
+    group.tabs = group.tabs.filter((tab) => tab.id !== msg.id);
+  });
 }
 
-const tabsActionQueue = new BlockingQueue();
-processTabsActions().then(() => console.log("Background tab processing stopped"));
+async function updateGroup(msg, updateFunction) {
+  const group = windowIdGroup.get(msg.windowId);
+  if (group === undefined || !group || group.id !== msg.groupId) {
+    console.warn("Message expired, skipping", msg);
+    return;
+  }
 
-//save tab to active group when opened
-browser.tabs.onCreated.addListener(async (tab) => {
+  await updateFunction(msg, group);
+  await saveUpdateGroup(group);
+}
+
+async function saveUpdateGroup(group) {
+  await saveGroup(group);
+  await saveUpdatedGroup(["tabs"], null);
+}
+
+async function closeGroup(groupId) {
+  const windowId = groupIdWindowId.get(groupId);
+
+  if (windowId === undefined || !windowId) {
+    return;
+  }
+
+  groupIdWindowId.delete(groupId);
+  windowIdGroup.delete(windowId);
+
+  await saveIdsToLocalStorage();
+  await closeWindow(windowId);
+}
+
+async function saveIdsToLocalStorage() {
+  await saveWindowIdGroupId(new Map(
+      [...windowIdGroup].map(([winId, group]) => [winId, group.id])
+  ));
+}
+
+async function processTabsActionsLoop() {
+  while(true) {
     try {
-        if (tab !== undefined && tab && isAvailableToUpdate(tab.windowId)) {
-            tabsActionQueue.add(new CreateTabAction(activeGroup.id, tab.index, tab.id, tab.url));
-        }
+      const msg = await tabsActionQueue.take();
+      logger.logInfo( "Processing tab message...", msg);
+
+      if (msg instanceof CreateTabAction) {
+        await createTab(msg);
+      } else if (msg instanceof UpdateTabAction) {
+        await updateTab(msg);
+      } else if (msg instanceof MoveTabAction) {
+        await moveTab(msg);
+      } else if (msg instanceof RemoveTabAction) {
+        await removeTab(msg);
+      } else {
+        console.warn("Can't process message", msg);
+      }
     } catch (e) {
-        console.error(e);
+      console.error(e);
     }
+  }
+}
+
+//-------------------- Backup ----------------------
+//set schedule backup task
+async function reinitBackupProcess() {
+  const enableBackup = await getEnableBackup();
+  const backupMinutes = await getBackupMinutes();
+
+  if (backupScheduler) {
+    clearInterval(backupScheduler);
+  }
+
+  if (!enableBackup) {
+    console.log("Backup turned off");
+    return;
+  }
+
+  if (backupMinutes) {
+    console.log(`Starting backup every ${backupMinutes} minutes`);
+    backupScheduler = setInterval(checkAndBackup, backupMinutes * 60 * 1000);
+    await checkAndBackup();
+  } else {
+    console.log("Can't start backup with empty minutes");
+  }
+}
+
+async function checkAndBackup() {
+  const lastBackupTime = await getLastBackupTime();
+  const now = new Date().getTime();
+
+  if (!lastBackupTime) {
+    await backupGroups();
+    return;
+  }
+
+  const diff = (now - lastBackupTime) / 1000 / 60;
+  const backupMinutes = await getBackupMinutes();
+
+  if (diff >= backupMinutes || backupMinutes - diff < 0.5) {
+    await backupGroups();
+  }
+}
+
+async function processRestoreBackup(json) {
+  console.log("Restoring from backup...", json);
+  await backupGroups();
+
+  await deleteAllGroups();
+  await closeAllAndOpenFirstGroup();
+
+  for (const item of json.allGroups) {
+    await saveGroup(item);
+  }
+
+  await saveSetting(json.enableBackup, async () => await saveEnableBackup(json.enableBackup));
+  await saveSetting(json.backupMinutes, async () => await saveBackupMinutes(Number(json.backupMinutes)));
+  await saveSetting(json.sidebarButtonsPaddingPx, async () => await saveSidebarButtonsPaddingPx(Number(json.sidebarButtonsPaddingPx)));
+  await saveSetting(json.tabsBehaviorOnChangeGroup, async () => await saveTabsBehaviorOnChangeGroup(json.tabsBehaviorOnChangeGroup));
+  await saveSetting(json.enableDebugLogs, async () => await saveEnableDebugLogs(json.enableDebugLogs));
+
+  await reinitBackupProcess();
+
+  await closeAllAndOpenFirstGroup();
+}
+
+async function saveSetting(param, saveFunction) {
+  if (param !== undefined && param !== null) {
+    await saveFunction();
+  }
+}
+
+//---------------- Event Listeners -----------------
+//----------------- Context menu -------------------
+browser.contextMenus.onHidden.addListener(() => {
+  browser.contextMenus.removeAll();
+});
+
+//--------------- Runtime messages -----------------
+browser.runtime.onMessage.addListener(async (msg, sender) => {
+  try {
+    logger.logInfo( "Processing runtime message...", msg);
+    if (msg.id === reinitBackupThreadId) {
+      await reinitBackupProcess();
+    } else if (msg.id === restoreFromBackupId) {
+      await processRestoreBackup(msg.data.json);
+    } else if (msg.id === openTabGroupId) {
+      await openGroup(msg.data.groupId, msg.data.windowId);
+    } else if (msg.id === openFirstGroupId) {
+      await closeAllAndOpenFirstGroup();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+browser.storage.onChanged.addListener(async (changes, area) => {
+  try {
+    if (area !== 'local') {
+      return;
+    }
+
+    logger.logInfo( "Processing local storage changes...", changes);
+    if (deletedGroupName in changes) {
+      //delete group
+      const groupChanges = changes[deletedGroupName]?.newValue;
+      if (groupChanges === undefined || !groupChanges) {
+        return;
+      }
+
+      await closeGroup(groupChanges.data);
+      await deleteGroup(groupChanges.data);
+
+    } else if (updatedGroupName in changes) {
+      //create or update group
+      const groupChanges = changes[updatedGroupName]?.newValue;
+
+      if (groupChanges === undefined || !groupChanges || groupChanges.data === undefined || !groupChanges.data) {
+        return;
+      }
+
+      if (!groupIdWindowId.has(groupChanges.data.id)) {
+        await saveGroup(groupChanges.data);
+        return;
+      }
+
+      const group = windowIdGroup[groupIdWindowId[groupChanges.data.id]];
+      if (group === undefined || !group) {
+        console.warn("Update message expired", groupChanges);
+        return;
+      }
+
+      if ('name' in groupChanges.changes) {
+        group.name = groupChanges.data.name;
+        group.icon = groupChanges.data.icon;
+      } else if ('index' in groupChanges.changes) {
+        group.index = groupChanges.data.index;
+      }
+
+      await saveGroup(group);
+    } else if (enableDebugLogsName in changes) {
+      //logs
+      logger.enabled = changes[enableDebugLogsName].newValue;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+//----------------- Group Manager ------------------
+//remove temp info about group
+browser.windows.onRemoved.addListener(id => {
+  try {
+    const group = windowIdGroup.get(id);
+    if (group === undefined || !group) {
+      return;
+    }
+
+    console.log("Stopping group processing...", group);
+    windowIdGroup.delete(id);
+    if (groupIdWindowId.get(group.id) === id) {
+      groupIdWindowId.delete(group.id);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+//save tab to group when opened
+browser.tabs.onCreated.addListener(async (tab) => {
+  try {
+    if (tab === undefined || !tab || tab.windowId === undefined || !tab.windowId) {
+      return;
+    }
+
+    let group = windowIdGroup.get(tab.windowId);
+    if (group === undefined || !group) {
+      return;
+    }
+
+    tabsActionQueue.add(new CreateTabAction(tab.windowId, group.id, tab.index, tab.id, tab.url));
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 //save tab if it was updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    try {
-        if (tab !== undefined && tab && isAvailableToUpdate(tab.windowId) && changeInfo !== undefined && changeInfo
-            && !isUrlEmpty(changeInfo.url)) {
-            tabsActionQueue.add(new UpdateTabAction(activeGroup.id, tab.id, changeInfo.url));
-        }
-    } catch (e) {
-        console.error(e);
+  try {
+    if (tab === undefined || !tab || tab.windowId === undefined || !tab.windowId || changeInfo === undefined
+      || !changeInfo || isUrlEmpty(changeInfo.url)) {
+      return;
     }
+
+    let group = windowIdGroup.get(tab.windowId);
+    if (group === undefined || !group) {
+      return;
+    }
+
+    tabsActionQueue.add(new UpdateTabAction(tab.windowId, group.id, tab.id, changeInfo.url));
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 //save moved tab
 browser.tabs.onMoved.addListener(async (tabId, changeInfo) => {
-    try {
-        if (changeInfo !== undefined && changeInfo && isAvailableToUpdate(changeInfo.windowId)
-            && activeGroup.tabs.find(tabF => tabF.id === tabId) !== undefined) {
-            tabsActionQueue.add(new MoveTabAction(activeGroup.id, tabId, changeInfo.toIndex));
-        }
-    } catch (e) {
-        console.error(e);
+  try {
+    if (tabId === undefined || !tabId || changeInfo === undefined || !changeInfo || changeInfo.windowId === undefined
+      || !changeInfo.windowId) {
+      return;
     }
+
+    let group = windowIdGroup.get(changeInfo.windowId);
+    if (group === undefined || !group) {
+      return;
+    }
+
+    tabsActionQueue.add(new MoveTabAction(changeInfo.windowId, group.id, tabId, changeInfo.toIndex));
+  } catch (e) {
+    console.error(e);
+  }
 })
 
-//remove tab from active group when closed
+//remove tab from group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-    try {
-        if (removeInfo !== undefined && removeInfo && isAvailableToUpdate(removeInfo.windowId) && !removeInfo.isWindowClosing) {
-            tabsActionQueue.add(new RemoveTabAction(activeGroup.id, tabId));
-        }
-    } catch (e) {
-        console.error(e);
+  try {
+    if (removeInfo === undefined || !removeInfo || removeInfo.isWindowClosing || removeInfo.windowId === undefined
+        || !removeInfo.windowId) {
+      return;
     }
-});
 
-function isAvailableToUpdate(windowId) {
-    return activeGroup && activeGroup.windowId === windowId;
-}
+    let group = windowIdGroup.get(removeInfo.windowId);
+    if (group === undefined || !group) {
+      return;
+    }
 
-async function save() {
-    await saveGroup(activeGroup);
-    notify(new TabsManagerReloadGroupsEvent());
-}
-
-//-------------------------- Listener for removing context menu items -----------------------
-
-//remove custom context menu items
-browser.contextMenus.onHidden.addListener(() => {
-    browser.contextMenus.removeAll();
+    tabsActionQueue.add(new RemoveTabAction(removeInfo.windowId, group.id, tabId));
+  } catch (e) {
+    console.error(e);
+  }
 });

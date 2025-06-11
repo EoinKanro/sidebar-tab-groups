@@ -1,104 +1,126 @@
 
-const activeGroupIdName = "activeGroupId";
-const activeWindowIdName = "activeWindowId";
-const groupToEditIdName = "groupToEditId";
-const enableBackupName = "enableBackup";
-const backupMinutesName = "backupMinutes";
+//----------------------------------------------------------
+//--------------------- Temp Data --------------------------
+//----------------------------------------------------------
+
 const lastBackupTimeName = "lastBackupTime";
-const sidebarButtonsPaddingPxName = "sidebarButtonsPaddingPx";
-const tabsBehaviorOnChangeGroup = "tabsBehaviorOnChangeGroup";
+export const groupToEditIdName = "groupToEditId";
+export const updatedGroupName = "updatedGroup";
+export const deletedGroupName = "deletedGroup";
+export const windowIdGroupIdName = "windowIdGroupId";
 
-//-------------------- Temp data --------------------
-//------------------- Active group ------------------
-export async function saveActiveGroupId(groupId) {
-    await saveToLocalStorage(activeGroupIdName, groupId);
-}
-
-export async function getActiveGroupId() {
-    return await getFromLocalStorage(activeGroupIdName);
-}
-
-export async function deleteActiveGroupId() {
-    await saveToLocalStorage(activeGroupIdName, null);
-}
-
-//------------------- Window id ----------------
-export async function saveActiveWindowId(windowId) {
-    await saveToLocalStorage(activeWindowIdName, windowId);
-}
-
-export async function getActiveWindowId() {
-    return await getFromLocalStorage(activeWindowIdName);
-}
-
-export async function deleteActiveWindowId() {
-    await saveToLocalStorage(activeWindowIdName, null);
-}
-
-//---------------- Group to edit id -------------------
-export async function saveGroupToEditId(groupId) {
-    await saveToLocalStorage(groupToEditIdName, groupId);
-}
-
-export async function getGroupToEditId() {
-    return await getFromLocalStorage(groupToEditIdName);
-}
-
-export async function deleteGroupToEditId() {
-    await saveToLocalStorage(groupToEditIdName, null);
-}
-
-//--------------------- Settings ----------------------
-//---------------------- Backup -----------------------
-export async function getEnableBackup() {
-    return await getFromLocalStorage(enableBackupName);
-}
-
-export async function saveEnableBackup(enableBackup) {
-    await saveToLocalStorage(enableBackupName, enableBackup);
-}
-
-export async function getBackupMinutes() {
-    return await getFromLocalStorage(backupMinutesName)
-}
-
-export async function saveBackupMinutes(minutes) {
-    await saveToLocalStorage(backupMinutesName, minutes);
-}
-
+//----------------------- Backup ---------------------------
 export async function saveLastBackupTime(time) {
-    await saveToLocalStorage(lastBackupTimeName, time);
+  await saveToLocalStorage(lastBackupTimeName, time);
 }
 
 export async function getLastBackupTime() {
-    return await getFromLocalStorage(lastBackupTimeName)
+  return await getFromLocalStorage(lastBackupTimeName)
+}
+
+//------------------ Group to edit id -------------------
+export async function saveGroupToEditId(groupId) {
+  await saveToLocalStorage(groupToEditIdName, groupId);
+}
+
+export async function getGroupToEditId() {
+  return await getFromLocalStorage(groupToEditIdName);
+}
+
+//------------------ Updated group --------------------
+export async function saveUpdatedGroup(changes, group) {
+  return await saveToLocalStorage(updatedGroupName, new UpdatedTabsGroup(changes, group));
+}
+
+//------------------ Deleted group --------------------
+export async function saveDeletedGroup(groupId) {
+  return await saveToLocalStorage(deletedGroupName, new UpdatedTabsGroup(null, groupId));
+}
+
+//---------------- Window Id Group Id -----------------
+export async function saveWindowIdGroupId(idMap) {
+  await saveToLocalStorage(windowIdGroupIdName, idMap);
+}
+
+export async function getWindowIdGroupId() {
+  return await getFromLocalStorage(windowIdGroupIdName);
+}
+
+export async function deleteWindowIdGroupId() {
+  await saveToLocalStorage(windowIdGroupIdName, null);
+}
+
+//----------------------------------------------------------
+//---------------------- Settings --------------------------
+//----------------------------------------------------------
+
+const enableBackupName = "enableBackup";
+const backupMinutesName = "backupMinutes";
+const tabsBehaviorOnChangeGroupName = "tabsBehaviorOnChangeGroup";
+export const sidebarButtonsPaddingPxName = "sidebarButtonsPaddingPx";
+export const enableDebugLogsName = "enableDebugLogs";
+
+//---------------------- Backup -----------------------
+export async function getEnableBackup() {
+  return await getFromLocalStorage(enableBackupName);
+}
+
+export async function saveEnableBackup(enableBackup) {
+  await saveToLocalStorage(enableBackupName, enableBackup);
+}
+
+export async function getBackupMinutes() {
+  return await getFromLocalStorage(backupMinutesName)
+}
+
+export async function saveBackupMinutes(minutes) {
+  await saveToLocalStorage(backupMinutesName, minutes);
 }
 
 //---------------------- Style ---------------------------
 export async function getSidebarButtonsPaddingPx() {
-    return await getFromLocalStorage(sidebarButtonsPaddingPxName);
+  return await getFromLocalStorage(sidebarButtonsPaddingPxName);
 }
 
 export async function saveSidebarButtonsPaddingPx(px) {
-    await saveToLocalStorage(sidebarButtonsPaddingPxName, px);
+  await saveToLocalStorage(sidebarButtonsPaddingPxName, px);
 }
 
 //------------------------ Tabs ---------------------------
 export async function getTabsBehaviorOnChangeGroup() {
-    return await getFromLocalStorage(tabsBehaviorOnChangeGroup);
+  return await getFromLocalStorage(tabsBehaviorOnChangeGroupName);
 }
 
 export async function saveTabsBehaviorOnChangeGroup(str) {
-    await saveToLocalStorage(tabsBehaviorOnChangeGroup, str);
+  await saveToLocalStorage(tabsBehaviorOnChangeGroupName, str);
 }
 
+//--------------------- Enable logs ------------------------
+export async function getEnableDebugLogs() {
+  return await getFromLocalStorage(enableDebugLogsName);
+}
+
+export async function saveEnableDebugLogs(bool) {
+  await saveToLocalStorage(enableDebugLogsName, bool);
+}
+
+//----------------------------------------------------------
 //----------------------- Utils ----------------------------
+//----------------------------------------------------------
+
 async function getFromLocalStorage(key) {
-    console.log(`Getting ${key} from local storage...`);
-    return (await browser.storage.local.get(key))[key];
+  return (await browser.storage.local.get(key))[key];
 }
 
 async function saveToLocalStorage(key, value) {
-    console.log(`Saving ${key} to local storage...`, value);
-    await browser.storage.local.set({ [key]: value });
+  await browser.storage.local.set({ [key]: value });
+}
+
+
+export class UpdatedTabsGroup {
+  constructor(changes = [], data = {}) {
+    this.changes = changes;
+    this.data = data;
+    this.date = new Date().getTime();
+  }
 }
