@@ -14,10 +14,10 @@ export async function getLatestWindow() {
 }
 
 // Open the tabs of selected group
-export async function openTabs(group, isNotify) {
+export async function openTabs(group, notifyBackground) {
     console.log("Opening tabs", group)
     //delete to prevent updating group in background
-    await deleteActiveGroup(isNotify);
+    await deleteActiveGroup(notifyBackground);
     const windowId = (await getLatestWindow()).id;
 
     group.windowId = windowId;
@@ -72,5 +72,5 @@ export async function openTabs(group, isNotify) {
     await saveGroup(group);
 
     //save for updating in background
-    await saveActiveGroup(group, isNotify)
+    await saveActiveGroup(group, notifyBackground)
 }
