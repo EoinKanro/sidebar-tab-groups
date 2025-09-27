@@ -1,110 +1,168 @@
+import {deleteGroupToEditId, getActiveGroupId, getActiveWindowId, getGroupToEditId} from "./data/localStorage.js";
+import {deleteGroup, getGroup, saveGroup} from "./data/databaseStorage.js";
 import {
-    TabsGroup, getGroupToEdit, saveGroup, deleteGroup, deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab,
-    saveActiveGroup, getWindowId, getAllGroups
-} from "./data/dataStorage.js";
+    BackgroundActiveGroupDeleted,
+    BackgroundActiveGroupUpdatedEvent, BackgroundOpenFirstGroupTabsEvent,
+    editGroupId, notify,
+    notifyEditGroupActiveGroupChanged,
+    notifyEditGroupGroupChanged, SidebarEditGroupClosedEvent,
+    SidebarReloadGroupButtonsEvent
+} from "./service/events.js";
+import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
+import {Tab, TabsGroup} from "./data/tabs.js";
+import {getAllOpenedTabs} from "./service/utils.js";
 
-import {
-    notify,
-    notifyBackgroundCurrentGroupUpdated,
-    notifyEditGroupReloadGroup,
-    notifySidebarEditGroupIsClosed,
-    notifySidebarReloadGroups
-} from "./data/events.js";
-
-//notify sidebar that the window is closed
-window.addEventListener('unload', () => {
-    notify(notifySidebarEditGroupIsClosed, null);
-});
-
-//load style
-let style = document.getElementById("js-style")
-if (!style) {
-    style = document.createElement('style');
-    style.id = "js-style";
-    document.head.appendChild(style);
-}
-browser.theme.getCurrent().then(theme => {
-    let colors;
-    if (theme?.colors) {
-        colors = theme.colors;
-    } else {
-        colors = {};
-        colors.popup = "#fff";
-        colors.popup_text = "rgb(21,20,26)";
-        colors.toolbar = "rgba(207,207,216,.33)";
-        colors.toolbar_text = "rgb(21,20,26)";
-    }
-
-    style.innerHTML =
-        `
-        body {
-            background-color: ${colors.popup};
-            color: ${colors.popup_text};
-        }
-        
-        .button-class {
-            background-color: ${colors.toolbar};
-            color: ${colors.toolbar_text};
-        }
-
-        #icon-selected {
-            background-color: ${colors.toolbar} !important;
-            color: ${colors.toolbar_text};
-        }
-        `;
-})
-
+let activeGroupId = await getActiveGroupId();
 let groupToEdit;
-let activeGroup;
-const windowId = await getWindowId();
 
+//----------------------- Document elements ------------------------------
+
+const style = getStyle("js-style");
+const header = document.getElementById('group-header')
 const groupName = document.getElementById("group-name");
 const iconSelected = document.getElementById("icon-selected");
+const symbols = await (await fetch('../font/google-symbols.json')).json();
+const iconSearch = document.getElementById("icon-search")
+const iconsList = document.getElementById("icons-list");
+const saveButton = document.getElementById('submit');
 const deleteButton = document.getElementById("delete");
 
-//load on open page
+//------------------------------- Init -----------------------------------
+
 await loadGroupToEdit();
-//reload when editing was clicked again and update active group if it was changed
+loadAvailableIconsList();
+
+browser.theme.getCurrent().then(theme => {
+    loadTheme(theme);
+})
+
+function loadTheme(theme) {
+    updatePopupStyle(style, theme);
+}
+
+//-------------------------- Event Listeners ------------------------------
+
+//update theme on change
+browser.theme.onUpdated.addListener(({ theme }) => {
+    loadTheme(theme);
+});
+
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    if (message.command === notifyEditGroupReloadGroup) {
+    if (!message.target.includes(editGroupId)) {
+        return;
+    }
+
+    //edit was clicked again. changing data and focus window
+    if (message.actionId === notifyEditGroupGroupChanged) {
         await loadGroupToEdit();
 
-        // Focus the current window
         const window = await browser.windows.getCurrent();
         if (window) {
             browser.windows.update(window.id, { focused: true });
         }
-    } else if (message.command === notifyBackgroundCurrentGroupUpdated) {
-        activeGroup = await getActiveGroup();
+    } else if (message.actionId === notifyEditGroupActiveGroupChanged) {
+        //active group was changed. should know it
+        activeGroupId = await getActiveGroupId();
     }
+})
+
+//change list of icons when searching
+iconSearch.oninput = function () {
+    loadAvailableIconsList();
+}
+
+//notify sidebar that the window is closed
+window.addEventListener('unload', () => {
+    notify(new SidebarEditGroupClosedEvent());
 });
+
+//save group
+saveButton.onclick = async function () {
+    const group = new TabsGroup(groupName.value, iconSelected.textContent);
+    group.windowId = await getActiveWindowId();
+
+    //save current tabs to new group if there is no currentGroup
+    if (!activeGroupId) {
+        const allTabs = await getAllOpenedTabs();
+        group.tabs = allTabs
+            .filter(tab => tab.windowId === group.windowId)
+            .map(tab => new Tab(tab.id, tab.url));
+    }
+
+    //edit active group
+    if (groupToEdit && groupToEdit.id === activeGroupId) {
+        notify(new BackgroundActiveGroupUpdatedEvent(group));
+    } else {
+        //create new one or edit common group
+        //set data if it's update
+        if (groupToEdit) {
+            group.id = groupToEdit.id;
+            group.tabs = groupToEdit.tabs;
+        }
+        await saveGroup(group);
+
+        //set group as active if there is no active group
+        if(!activeGroupId) {
+            notify(new BackgroundActiveGroupUpdatedEvent(group))
+        }
+    }
+
+    await deleteGroupToEditId();
+    notify(new SidebarReloadGroupButtonsEvent());
+    window.close();
+};
+
+//delete group
+deleteButton.onclick = async function () {
+    let confirmDelete = confirm("Are you sure you want to delete this group?");
+
+    if (confirmDelete) {
+        //in case if some tabs are loading
+        if (groupToEdit.id === activeGroupId) {
+            notify(new BackgroundActiveGroupDeleted());
+        }
+
+        await deleteGroup(groupToEdit.id);
+
+        if (groupToEdit.id === activeGroupId) {
+            notify(new BackgroundOpenFirstGroupTabsEvent());
+        } else {
+            notify(new SidebarReloadGroupButtonsEvent());
+        }
+
+        //todo close tabs
+        await deleteGroupToEditId();
+        window.close();
+    }
+}
+
+//------------------------- Document Actions ------------------------------
 
 //set values of group to edit to the page
 async function loadGroupToEdit() {
-    activeGroup = await getActiveGroup();
-    groupToEdit = await getGroupToEdit();
+    const groupToEditId = await getGroupToEditId();
+
+    if (groupToEditId) {
+        groupToEdit = await getGroup(groupToEditId);
+    } else {
+        groupToEdit = null;
+    }
 
     if (groupToEdit) {
-        document.getElementById('group-header').textContent = 'Edit Group';
+        header.textContent = 'Edit Group';
         groupName.value = groupToEdit.name;
         iconSelected.textContent = groupToEdit.icon;
         deleteButton.style.visibility = '';
     } else {
-        document.getElementById('group-header').textContent = 'New Group';
+        header.textContent = 'New Group';
         groupName.value = '';
         iconSelected.textContent = '';
         deleteButton.style.visibility = 'hidden';
     }
 }
 
-
-const symbols = await (await fetch('../font/google-symbols.json')).json();
-const iconSearch = document.getElementById("icon-search")
-const iconsList = document.getElementById("icons-list");
-
-//load symbols to selector
-loadIcons();
-function loadIcons() {
+function loadAvailableIconsList() {
+    //todo theme from file
     let iconsToLoad = symbols.symbols;
     if (iconSearch.value) {
         iconsToLoad = iconsToLoad.filter((icon) => icon.includes(iconSearch.value));
@@ -128,59 +186,3 @@ function loadIcons() {
         iconsList.appendChild(button);
     })
 }
-
-iconSearch.addEventListener("input", () => {
-    loadIcons();
-})
-
-//save group
-document.getElementById('submit').onclick = async function () {
-    const group = new TabsGroup(groupName.value, iconSelected.textContent);
-    group.windowId = windowId;
-
-    //save current tabs to new group if there is no currentGroup
-    if (!activeGroup) {
-        const allTabs = await getAllOpenedTabs();
-        group.tabs = allTabs
-            .filter(tab => tab.windowId === windowId)
-            .map(tab => new Tab(tab.id, tab.url));
-    }
-
-    //set data if it's an update
-    if (groupToEdit) {
-        group.id = groupToEdit.id;
-        group.tabs = groupToEdit.tabs;
-    }
-
-    await saveGroup(group);
-    await deleteGroupToEdit();
-
-    //notify background if there is no active group or we've updated active group
-    if (!activeGroup || activeGroup.id === group.id) {
-        await saveActiveGroup(group, true);
-    }
-    notify(notifySidebarReloadGroups, false);
-    window.close();
-};
-
-//delete group
-deleteButton.onclick = async function () {
-    let confirmDelete = confirm("Are you sure you want to delete this group?");
-
-    if (confirmDelete) {
-        await deleteGroup(groupToEdit.id);
-
-        let openTabs = false;
-        if (groupToEdit.id === activeGroup.id) {
-            const allGroups = await getAllGroups();
-
-            if (allGroups && allGroups.length > 0) {
-                await saveActiveGroup(allGroups[0], true);
-                openTabs = true;
-            }
-        }
-        notify(notifySidebarReloadGroups, openTabs);
-        window.close();
-    }
-}
-

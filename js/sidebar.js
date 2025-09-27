@@ -1,115 +1,123 @@
-import {
-    getGroup,
-    deleteGroupToEdit,
-    getAllGroups,
-    saveGroupToEdit,
-    getActiveGroup,
-    saveWindowId, getSidebarButtonsPadding
-} from "./data/dataStorage.js";
 
 import {
-    notify,
-    notifyEditGroupReloadGroup,
-    notifySidebarEditGroupIsClosed,
-    notifySidebarReloadGroups,
-    notifySidebarUpdateButtonsPadding
-} from "./data/events.js";
+    BackgroundOpenTabsEvent, EditGroupGroupChangedEvent,
+    notify, notifySidebarEditGroupClosed,
+    notifySidebarReloadGroupButtons,
+    notifySidebarUpdateActiveGroupButton, notifySidebarUpdateButtonsPadding,
+    sidebarId
+} from "./service/events.js";
+import {getAllGroups} from "./data/databaseStorage.js";
+import {deleteGroupToEditId, getActiveGroupId, saveActiveWindowId, saveGroupToEditId} from "./data/localStorage.js";
+import {getLatestWindow} from "./service/utils.js";
+import {getStyle, updateSidebarButtonsPadding, updateSidebarStyle} from "./service/styleUtils.js";
 
-import {getLatestWindow, openTabs} from "./data/utils.js";
+const editGroupContextMenuIdPattern = "edit-group-";
+const groupIdAttribute = "groupId";
+const selectedClass = "selected";
 
-const editGroupId = "edit-group-";
-const selectedName = "selected";
-let editIsOpen = false;
+let editGroupOpened = false;
 
-await reloadGroups(false);
+//----------------------- Document elements ------------------------------
+const tabButtons = document.getElementById('tab-buttons');
+const styleTheme = getStyle("style-theme")
+const styleButtonsPadding = getStyle("style-buttons-padding");
 
-//load theme of sidebar
-let styleTheme = document.getElementById("style-theme");
-if (!styleTheme) {
-    styleTheme = createStyle("style-theme");
-}
+//--------------------------------- Init --------------------------------
 
-let styleButtonsPadding = document.getElementById("style-buttons-padding");
-if (!styleButtonsPadding) {
-    styleButtonsPadding = createStyle("style-buttons-padding");
-}
+await reloadGroupButtons();
+await loadButtonsPadding();
 
-function createStyle(id) {
-    let style = document.createElement("style");
-    style.id = id;
-    document.head.appendChild(style);
-    return style;
-}
-
-await reloadButtonsPadding();
 browser.theme.getCurrent().then(theme => {
     loadTheme(theme);
 })
 
+function loadTheme(theme) {
+    updateSidebarStyle(styleTheme, theme);
+}
 
+async function loadButtonsPadding() {
+    await updateSidebarButtonsPadding(styleButtonsPadding);
+}
 
-//update sidebar on update theme
+//----------------------- Event listeners --------------------------
+
+//update theme on change
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
 
-//Open create group on click
-document.getElementById('create-group').addEventListener('click', async () => {
-    await openGroupEditor(null);
-});
-
-//Reload groups buttons in sidebar on event
-//Set variable editIsOpen to false when the window is closed
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    if (message.command === notifySidebarReloadGroups) {
-        await reloadGroups(message.data);
-    } else if (message.command === notifySidebarEditGroupIsClosed) {
-        console.log("Edit group was closed");
-        editIsOpen = false;
-    } else if (message.command === notifySidebarUpdateButtonsPadding) {
-        await reloadButtonsPadding();
+    if (!message.target.includes(sidebarId)) {
+        return;
+    }
+
+    if (message.actionId === notifySidebarUpdateActiveGroupButton) {
+        await updateActiveGroupButton();
+    } else if (message.actionId === notifySidebarReloadGroupButtons) {
+        await reloadGroupButtons();
+    } else if (message.actionId === notifySidebarEditGroupClosed) {
+        editGroupOpened = false;
+    } else if (message.actionId === notifySidebarUpdateButtonsPadding) {
+        await loadButtonsPadding();
     }
 });
 
-//Handle click to edit
+//open group editor on context menu button
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId.startsWith(editGroupId)) {
-        const id = info.menuItemId.replace(editGroupId,"");
-        const groupToEdit = await getGroup(Number(id));
-        await openGroupEditor(groupToEdit);
+    if (info.menuItemId.startsWith(editGroupContextMenuIdPattern)) {
+        const id = info.menuItemId.replace(editGroupContextMenuIdPattern,"");
+        await openGroupEditor(Number(id));
     }
 });
 
-async function reloadGroups(isOpenTabs) {
-    const allGroups = await getAllGroups();
-    let activeGroup = await getActiveGroup();
+//open group editor on click new group
+document.getElementById('create-group').onclick = async function () {
+    await openGroupEditor(null);
+}
 
-    if (allGroups) {
-        const tabButtons = document.getElementById('tab-buttons');
-        tabButtons.innerHTML = '';
+//-------------------------- Document actions -------------------------
 
-        allGroups.forEach((group) => {
-            const selected = group.id === activeGroup?.id;
-            createButton(group, selected);
-        })
+async function updateActiveGroupButton() {
+    if (tabButtons.children.length <= 0) {
+        return;
     }
 
-    if (activeGroup && isOpenTabs) {
-        await callOpenTabs(activeGroup);
+    const activeGroupId = await getActiveGroupId();
+    for (let groupButton of tabButtons.children) {
+        const groupIdStr = groupButton.getAttribute(groupIdAttribute);
+
+        if (!groupIdStr || (Number(groupIdStr) !== activeGroupId)) {
+            groupButton.classList.remove(selectedClass);
+        } else {
+            groupButton.classList.add(selectedClass);
+        }
     }
 }
 
-async function createButton(group, selected) {
-    //todo colors
-    const tabButtons = document.getElementById('tab-buttons');
+async function reloadGroupButtons() {
+    const allGroups = await getAllGroups();
+    let activeGroupId = await getActiveGroupId();
 
+    if (allGroups) {
+        tabButtons.innerHTML = '';
+
+        allGroups.forEach((group) => {
+            const selected = group.id === activeGroupId;
+            createGroupButton(group, selected);
+        })
+    }
+}
+
+async function createGroupButton(group, selected) {
     const button = document.createElement('button');
-    button.title=group.name;
+    button.title = group.name;
+
     button.classList.add('button-class');
+    button.setAttribute(groupIdAttribute, group.id);
 
     //set style selected
     if (selected) {
-        button.classList.add(selectedName);
+        button.classList.add(selectedClass);
     }
 
     const span = document.createElement('span');
@@ -118,121 +126,59 @@ async function createButton(group, selected) {
 
     button.appendChild(span);
 
-    //open tabs of group on click and send group to background
-    button.addEventListener('click', async () => {
+    //call background to open group on left click
+    button.onclick = async function () {
         //don't open if already opened
-        const activeGroup = await getActiveGroup();
-        if (activeGroup && activeGroup.id === group.id) {
+        const activeGroup = await getActiveGroupId();
+        if (activeGroup && activeGroup === group.id) {
             return;
         }
 
         //save current window id to open all tabs here
-        await saveWindowId((await getLatestWindow()).id)
+        await saveActiveWindowId((await getLatestWindow()).id)
 
-        //remove style selected from all buttons
-        for (let child of tabButtons.children) {
-            child.classList.remove(selectedName)
-        }
+        //call background
+        notify(new BackgroundOpenTabsEvent(group.id))
+    }
 
-        //add to current button style selected
-        button.classList.add(selectedName);
-
-        const groupToOpen = await getGroup(group.id);
-        await callOpenTabs(groupToOpen);
-    });
-
-    // Attach a contextmenu event listener to the button
-    button.addEventListener('contextmenu', (event) => {
+    //add edit button to context menu on right click
+    button.oncontextmenu = function () {
         // Remove any existing custom context menu to avoid duplicates
         browser.contextMenus.removeAll();
 
         browser.contextMenus.create({
-            id: `${editGroupId}${group.id}`,
+            id: `${editGroupContextMenuIdPattern}${group.id}`,
             title: `Edit Group ${group.name}`,
             contexts: ["all"]
         });
-    });
+    }
 
     //add button
     tabButtons.appendChild(button);
 }
 
-async function callOpenTabs(group) {
-    await openTabs(group, true);
-}
-
-async function openGroupEditor(group) {
-    if (!group) {
-        await deleteGroupToEdit()
+async function openGroupEditor(groupId) {
+    if (!groupId) {
+        await deleteGroupToEditId()
     } else {
-        await saveGroupToEdit(group);
+        await saveGroupToEditId(groupId);
     }
 
     //don't open page again, just reload content
-    if (editIsOpen) {
-        notify(notifyEditGroupReloadGroup, null);
+    if (editGroupOpened) {
+        notify(new EditGroupGroupChangedEvent());
         return
     }
 
     const activeWindow = await getLatestWindow();
-    // console.log(activeWindow)
     const viewportWidth = Math.round(activeWindow.width * 0.6);
     const viewportHeight = Math.round(activeWindow.height * 0.5);
 
-    editIsOpen = true;
+    editGroupOpened = true;
     browser.windows.create({
         url: browser.runtime.getURL("../html/editGroup.html"),
         type: "popup",
         width: viewportWidth,
         height: viewportHeight
     })
-}
-
-async function reloadButtonsPadding() {
-    const paddingPx = await getSidebarButtonsPadding();
-    if (paddingPx) {
-        styleButtonsPadding.innerHTML =
-            `
-            .button-class {
-                padding-top: ${paddingPx}px !important;
-                padding-bottom: ${paddingPx}px !important;
-            }
-            `
-    }
-}
-
-function loadTheme(theme) {
-    console.log(theme);
-
-
-    let colors
-    if (theme?.colors) {
-        colors = theme.colors;
-    } else {
-        colors = {};
-
-        colors.frame = "rgb(240, 240, 244)"
-        colors.tab_background_text = "rgb(21, 20, 26)"
-        colors.toolbar = "white"
-    }
-
-    styleTheme.innerHTML =
-        `
-        body {
-            background-color: ${colors.frame} !important;
-        }
-        
-        .button-class {
-            background-color: ${colors.frame} !important;
-            color: ${colors.tab_background_text} !important;
-        }
-        
-        .button-class:hover {
-            background-color: ${colors.toolbar} !important;
-        }
-        
-        .selected {
-            background-color: ${colors.toolbar} !important;
-        }
-        `;
 }

@@ -1,14 +1,14 @@
-import {
-    deleteActiveGroup,
-    getAllGroups,
-    getAllOpenedTabs,
-    getIfCloseTabs,
-    getWindowId,
-    saveActiveGroup,
-    saveGroup,
-    saveLastBackupTime,
-    Tab
-} from "./dataStorage.js";
+
+// Open the tabs of selected group
+import {getActiveWindowId, getCloseTabsOnChangeGroup, saveLastBackupTime} from "../data/localStorage.js";
+import {getAllGroups, getGroup, saveGroup} from "../data/databaseStorage.js";
+import {Tab} from "../data/tabs.js";
+
+//------------------- Browser utils -------------------
+
+export async function getAllOpenedTabs() {
+    return await browser.tabs.query({});
+}
 
 export async function getLatestWindow() {
     try {
@@ -23,14 +23,19 @@ export async function getLatestWindow() {
     }
 }
 
-// Open the tabs of selected group
-export async function openTabs(group, notifyBackground) {
-    console.log("Opening tabs", group)
-    //delete to prevent updating group in background
-    await deleteActiveGroup(notifyBackground);
-
+/**
+ * @returns {TabsGroup} group/null
+ */
+export async function openTabs(groupId) {
+    console.log("Opening tabs...", groupId)
     const allTabs = await getAllOpenedTabs();
-    const windowId = await getWindowId();
+    const windowId = await getActiveWindowId();
+    const group = await getGroup(groupId);
+
+    if (!group) {
+        console.log("Can't find group to open", groupId);
+        return null;
+    }
 
     group.windowId = windowId;
 
@@ -77,31 +82,46 @@ export async function openTabs(group, notifyBackground) {
     }
 
     //close or hide old tabs
-    const closeTabs = await getIfCloseTabs();
+    const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
     const openedIds = openedTabs.map(tab => tab.id);
     const idsToCloseOrHide = allTabs
         .filter(tab => !openedIds.includes(tab.id))
         .map(tab => tab.id);
 
-    if (!closeTabs) {
-        //show openedTabs, sort them, then hide tabs not from current group
+
+    if (!closeTabsOnChangeGroup) {
+        //show openedTabs
         await browser.tabs.show(openedIds);
+        //set last active
         await browser.tabs.update(openedIds[openedIds.length - 1], { active: true });
+        //sort
         for (let i = 0; i < openedTabs.length; i++) {
             await browser.tabs.move(openedTabs[i].id, { index: i });
         }
-        await browser.tabs.hide(idsToCloseOrHide);
+        //hide
+        for (const tabId of idsToCloseOrHide) {
+            try {
+                await browser.tabs.hide(tabId);
+            } catch (e) {
+                console.log(`Can't hide tab: ${tabId}`, e);
+            }
+        }
     } else {
-        //just close tabs not from current group
-        await browser.tabs.remove(idsToCloseOrHide);
+        //close
+        for (const tabId of idsToCloseOrHide) {
+            try {
+                await browser.tabs.remove(tabId);
+            } catch (e) {
+                console.log(`Can't remove tab: ${tabId}`, e);
+            }
+        }
     }
 
     //update group after possible errors
     group.tabs = openedTabs;
     await saveGroup(group);
 
-    //save for updating in background
-    await saveActiveGroup(group, notifyBackground)
+    return group;
 }
 
 //find tab in all tabs that doesn't have the id from openedTabs to reuse
@@ -115,6 +135,7 @@ function findTab(allTabs, openedTabs, url) {
     return null;
 }
 
+//------------------------ Backup ---------------------
 //save to Downloads
 export async function backupGroups() {
     const allGroups = await getAllGroups();

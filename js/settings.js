@@ -1,52 +1,25 @@
+
 import {
-    deleteActiveGroup, deleteAllGroups,
-    getBackupMinutes, getIfCloseTabs,
+    getBackupMinutes,
+    getCloseTabsOnChangeGroup,
     getEnableBackup,
-    saveBackupMinutes, saveIfCloseTabs,
-    saveEnableBackup, saveGroup, getSidebarButtonsPadding, saveSidebarButtonsPadding
-} from "./data/dataStorage.js";
+    getSidebarButtonsPaddingPx,
+    saveBackupMinutes,
+    saveCloseTabsOnChangeGroup,
+    saveEnableBackup,
+    saveSidebarButtonsPaddingPx
+} from "./data/localStorage.js";
 import {
+    BackgroundReinitBackupEvent,
+    BackgroundRestoreBackup,
     notify,
-    notifyBackgroundReloadAllGroups,
-    notifyBackgroundUpdateBackup,
-    notifySidebarUpdateButtonsPadding
-} from "./data/events.js";
-import {backupGroups} from "./data/utils.js";
+    SidebarUpdateButtonsPadding
+} from "./service/events.js";
+import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 
-//load style
-let style = document.getElementById("js-style")
-if (!style) {
-    style = document.createElement('style');
-    style.id = "js-style";
-    document.head.appendChild(style);
-}
-browser.theme.getCurrent().then(theme => {
-    let colors;
-    if (theme?.colors) {
-        colors = theme.colors;
-    } else {
-        colors = {};
-        colors.popup = "#fff";
-        colors.popup_text = "rgb(21,20,26)";
-        colors.toolbar = "rgba(207,207,216,.33)";
-        colors.toolbar_text = "rgb(21,20,26)";
-    }
+//----------------------- Document elements ------------------------------
 
-    style.innerHTML =
-        `
-        body {
-            background-color: ${colors.popup};
-            color: ${colors.popup_text};
-        }
-        
-        .button-class {
-            background-color: ${colors.toolbar};
-            color: ${colors.toolbar_text};
-        }
-        
-        `;
-})
-
+const style = getStyle("js-style");
 const sidebarButtonsPadding = document.getElementById('sidebar-buttons-padding');
 const saveAppearanceButton = document.getElementById('save-appearance-button');
 const backupCheckbox = document.getElementById('backup-checkbox');
@@ -57,46 +30,45 @@ const restoreButton = document.getElementById('restore-button');
 const closeTabsCheckbox = document.getElementById('close-tabs-checkbox');
 const saveTabsButton = document.getElementById('save-tabs-button');
 
+//---------------------------- Init ----------------------------------------
+await init();
 
-const sidebarButtonsPaddingPx = await getSidebarButtonsPadding();
-const isBackup = await getEnableBackup();
-const backupMinutes = await getBackupMinutes();
-const isCloseTabs = await getIfCloseTabs();
+async function init() {
+    const sidebarButtonsPaddingPx = await getSidebarButtonsPaddingPx();
+    const isBackup = await getEnableBackup();
+    const backupMinutes = await getBackupMinutes();
+    const isCloseTabs = await getCloseTabsOnChangeGroup();
 
-//Set data from store
-if (sidebarButtonsPaddingPx) {
-    sidebarButtonsPadding.value = sidebarButtonsPaddingPx;
+    //Set data from store
+    if (sidebarButtonsPaddingPx) {
+        sidebarButtonsPadding.value = sidebarButtonsPaddingPx;
+    }
+
+    backupCheckbox.checked = isBackup;
+    if (backupMinutes) {
+        backupTime.value = backupMinutes;
+    }
+
+    closeTabsCheckbox.checked = isCloseTabs;
 }
 
-backupCheckbox.checked = isBackup;
-if (backupMinutes) {
-    backupTime.value = backupMinutes;
-}
-
-closeTabsCheckbox.checked = isCloseTabs;
-
-
-//Restrict non digits
-sidebarButtonsPadding.addEventListener('input', (event) => {
-    event.target.value = replaceNonDigits(event.target.value);
-});
-backupTime.addEventListener('input', (event) => {
-    event.target.value = replaceNonDigits(event.target.value);
-});
-
-function replaceNonDigits(value) {
-    return value.replace(/[^0-9]/g, '');
-}
-
-//Save appearance settings
-saveAppearanceButton.addEventListener('click', async (event) => {
-    await saveSidebarButtonsPadding(sidebarButtonsPadding.value);
-    notify(notifySidebarUpdateButtonsPadding, null);
-    alert("Appearance settings are updated")
+browser.theme.getCurrent().then(theme => {
+    loadTheme(theme);
 })
 
+function loadTheme(theme) {
+    updatePopupStyle(style, theme);
+}
+
+//---------------------- Backup listeners -----------------------------
+
+//allow only digits
+backupTime.oninput = function (event) {
+    event.target.value = replaceNonDigits(event.target.value);
+};
+
 //Save backup settings
-saveBackupButton.addEventListener('click', async (event) => {
+saveBackupButton.onclick = async function () {
     if (backupCheckbox.checked && (!backupTime.value || Number(backupTime.value) <= 0)) {
         alert("Wrong value of minutes for backup");
         return
@@ -104,16 +76,16 @@ saveBackupButton.addEventListener('click', async (event) => {
 
     await saveEnableBackup(backupCheckbox.checked);
     await saveBackupMinutes(backupTime.value);
-    notify(notifyBackgroundUpdateBackup, null);
+    notify(new BackgroundReinitBackupEvent());
 
     const alertText = backupCheckbox.checked ?
         `Backup will be saved in Downloads every ${backupTime.value} minutes` :
         `Backup switched off`;
     alert(alertText);
-})
+};
 
 //Reload from backup
-restoreButton.addEventListener('click', async (event) => {
+restoreButton.onclick = async function () {
     const restoreTextData = restoreText.value;
     if (!restoreTextData) {
         alert("There is nothing to restore");
@@ -136,20 +108,39 @@ restoreButton.addEventListener('click', async (event) => {
         return;
     }
 
-    await backupGroups();
-    await deleteActiveGroup(true);
-    await deleteAllGroups()
+    notify(new BackgroundRestoreBackup(restoreJson));
+    alert("Restoration is complete. If something is wrong you can find a backup file right before the restoration in Downloads");
+};
 
-    for (const item of restoreJson) {
-        await saveGroup(item);
-    }
+//-------------------- Appearance listeners ------------------------
 
-    notify(notifyBackgroundReloadAllGroups, null);
-    alert("Restoration is complete. If something is wrong you can find a backup right before the restoration in Downloads");
-})
+//update theme on change
+browser.theme.onUpdated.addListener(({ theme }) => {
+    loadTheme(theme);
+});
+
+//allow only digits
+sidebarButtonsPadding.oninput = function (event) {
+    event.target.value = replaceNonDigits(event.target.value);
+};
+
+//Save appearance settings
+saveAppearanceButton.onclick = async function () {
+    await saveSidebarButtonsPaddingPx(sidebarButtonsPadding.value);
+    notify(new SidebarUpdateButtonsPadding());
+    alert("Appearance settings are updated");
+};
+
+//------------------ Tabs listeners -----------------------
 
 //Save tab settings
-saveTabsButton.addEventListener('click', async (event) => {
-    await saveIfCloseTabs(closeTabsCheckbox.checked);
+saveTabsButton.onclick = async function () {
+    await saveCloseTabsOnChangeGroup(closeTabsCheckbox.checked);
     alert("Tabs settings are updated");
-});
+};
+
+//----------------- Utils -------------------
+
+function replaceNonDigits(value) {
+    return value.replace(/[^0-9]/g, '');
+}
