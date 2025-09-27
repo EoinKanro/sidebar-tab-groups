@@ -111,11 +111,9 @@ export function getData(request) {
     return new Promise(async (resolve, reject) => {
         const transaction = db.transaction([request.storeName], "readonly");
         const store = transaction.objectStore(request.storeName);
-        console.log(store)
 
         const requestDb = store.get(request.data);
         requestDb.onsuccess = function (event) {
-            console.log(event)
             console.log(`Got successfully: `, request.data, event.target.result);
             resolve(event.target.result || null);
         };
