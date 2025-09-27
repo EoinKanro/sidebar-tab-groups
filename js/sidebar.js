@@ -10,9 +10,9 @@ class Tab {
 await saveCurrentGroup(null);
 
 // Event listener for creating a new group
-document.getElementById('create-group').addEventListener('click', createNewGroup);
+document.getElementById('create-group').addEventListener('click', clickCreateNewGroup);
 
-async function createNewGroup() {
+async function clickCreateNewGroup() {
     //todo popup
 
     const currentGroup = await getCurrentGroup();
@@ -38,6 +38,11 @@ async function createNewGroup() {
     //save group to storage and create button
     await saveGroup(newGroup);
     await createButton(newGroup);
+
+    //set active if there is no active group
+    if (!currentGroup) {
+        await saveCurrentGroup(newGroup);
+    }
 }
 
 async function createButton(group) {

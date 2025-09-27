@@ -20,7 +20,7 @@ export async function saveGroup(group) {
     const groupName = getGroupName(group);
 
     await browser.storage.local.set({[groupName]: group})
-    console.log(`Saved group. Key: ${groupName}. Value: ${group}`);
+    console.log(`Saved group. Key: ${groupName}. Value: ${JSON.stringify(group, null, 0)}`);
 }
 
 export async function getAllTabs() {
@@ -29,6 +29,7 @@ export async function getAllTabs() {
 
 export async function saveCurrentGroup(group) {
     await browser.storage.local.set( {["currentGroup"] : group} )
+    console.log(`Set current group: ${JSON.stringify(group, null, 0)}`);
 }
 
 export async function getCurrentGroup() {
