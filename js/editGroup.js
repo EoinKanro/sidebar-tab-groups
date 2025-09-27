@@ -48,23 +48,27 @@ browser.theme.onUpdated.addListener(({ theme }) => {
 });
 
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    if (!message.target.includes(editGroupId)) {
-        return;
-    }
-
-    //edit was clicked again. changing data and focus window
-    if (message.actionId === notifyEditGroupGroupChanged) {
-        await loadGroupToEdit();
-
-        const window = await browser.windows.getCurrent();
-        if (window) {
-            browser.windows.update(window.id, { focused: true });
+    try {
+        if (!message.target.includes(editGroupId)) {
+            return;
         }
-    } else if (message.actionId === notifyEditGroupActiveGroupChanged) {
-        //active group was changed. should know it
-        activeGroupId = await getActiveGroupId();
+
+        //edit was clicked again. changing data and focus window
+        if (message.actionId === notifyEditGroupGroupChanged) {
+            await loadGroupToEdit();
+
+            const window = await browser.windows.getCurrent();
+            if (window) {
+                browser.windows.update(window.id, { focused: true });
+            }
+        } else if (message.actionId === notifyEditGroupActiveGroupChanged) {
+            //active group was changed. should know it
+            activeGroupId = await getActiveGroupId();
+        }
+    } catch (e) {
+        console.error(e);
     }
-})
+});
 
 //change list of icons when searching
 iconSearch.oninput = function () {
