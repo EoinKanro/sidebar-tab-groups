@@ -99,6 +99,12 @@ async function createButton(group, selected) {
 
     //open tabs of group on click and send group to background
     button.addEventListener('click', async () => {
+        //don't open if already opened
+        const activeGroup = await getActiveGroup();
+        if (activeGroup && activeGroup.id === group.id) {
+            return;
+        }
+
         //remove style selected from all buttons
         for (let child of tabButtons.children) {
             child.classList.remove(selectedName)
