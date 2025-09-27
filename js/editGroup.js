@@ -162,7 +162,6 @@ async function loadGroupToEdit() {
 }
 
 function loadAvailableIconsList() {
-    //todo theme from file
     let iconsToLoad = symbols.symbols;
     if (iconSearch.value) {
         iconsToLoad = iconsToLoad.filter((icon) => icon.includes(iconSearch.value));
