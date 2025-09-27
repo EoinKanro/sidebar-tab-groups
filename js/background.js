@@ -81,10 +81,16 @@ async function processOpenTabs(groupId) {
     const previousActiveGroup = activeGroup;
 
     activeGroup = null;
-    activeGroup = await openTabs(groupId);
+    try {
+        activeGroup = await openTabs(groupId);
+    } catch (e) {
+        console.error("Can't open group ", groupId)
+    }
 
     if (!activeGroup) {
         activeGroup = previousActiveGroup;
+    } else {
+        await save();
     }
 
     if (activeGroup) {
