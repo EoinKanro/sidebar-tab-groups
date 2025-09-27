@@ -76,21 +76,15 @@ export function getAllData(request) {
     return new Promise(async (resolve) => {
         const transaction = db.transaction([request.storeName], "readonly");
         const store = transaction.objectStore(request.storeName);
-        const requestDb = store.openCursor();
 
-        const result = [];
+        const requestDb = store.getAll();
 
-        requestDb.onsuccess = function (event) {
-            const cursor = event.target.result;
-            if (cursor) {
-                result.push(cursor.value);
-                cursor.continue();
-            } else {
-                console.log(`Got all successfully: `, result)
-                resolve(result);
-            }
+        requestDb.onsuccess = function(event) {
+            console.log(`Got all successfully: `, event.target.result)
+            resolve(event.target.result);
         };
-        requestDb.onerror = function (event) {
+
+        requestDb.onerror = function(event) {
             console.log(`Got all with error: `, event)
             resolve(null);
         };
