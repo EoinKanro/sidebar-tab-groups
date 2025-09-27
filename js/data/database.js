@@ -11,7 +11,7 @@ import {
 indexedDB.deleteDatabase("SidebarTabGroups")
 
 export class Request {
-    constructor(storeName, data, id = 0) {
+    constructor(storeName, data, id = "") {
         this.storeName = storeName;
         this.data = data;
         this.id = id;
