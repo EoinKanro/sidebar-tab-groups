@@ -21,7 +21,7 @@ await initDatabase();
 await deleteActiveGroup(false);
 await deleteGroupToEdit();
 await saveWindowId((await getLatestWindow()).id);
-await reloadGroups();
+await reloadGroups(false);
 
 const selectedName = "selected";
 
@@ -34,11 +34,11 @@ document.getElementById('create-group').addEventListener('click', async () => {
 //Reload groups in sidebar on any updates
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
     if (message.command === notifySidebarReloadGroups) {
-        await reloadGroups()
+        await reloadGroups(message.data)
     }
 });
 
-async function reloadGroups() {
+async function reloadGroups(isOpenTabs) {
     const allGroups = await getAllGroups(true);
     const activeGroup = await getActiveGroup();
 
@@ -50,6 +50,12 @@ async function reloadGroups() {
             const selected = group.id === activeGroup?.id;
             createButton(group, selected);
         })
+    }
+
+    if (activeGroup && isOpenTabs) {
+        await openTabs(activeGroup);
+    } else if (!activeGroup && allGroups && allGroups.length > 0) {
+        await openTabs(allGroups[0]);
     }
 }
 
@@ -101,24 +107,21 @@ async function createButton(group, selected) {
 
 // Open the tabs of selected group
 async function openTabs(group) {
+    console.log("Opening tabs", group)
     //delete to prevent updating group in background
     await deleteActiveGroup(true);
     const windowId = (await getLatestWindow()).id;
 
     group.windowId = windowId;
 
-    //create empty tab in empty group
-    if (group.tabs.length <= 0) {
-        group.tabs.push(new Tab(0, "about:blank"));
-    }
-
     //open all tabs from group and save ids
+    let openedTabs = [];
     for (const tab of group.tabs) {
         try {
             const url = tab.url;
 
             let createdTab;
-            if (url.startsWith("http") || url === "about:blank") {
+            if (url.startsWith("http")) {
                 createdTab = await browser.tabs.create({
                     url: tab.url,
                     windowId: windowId
@@ -131,13 +134,25 @@ async function openTabs(group) {
             }
 
             tab.id = createdTab.id;
+            openedTabs.push(tab);
         } catch (e) {
             console.error(`Can't open tab: ${tab.url}`);
         }
     }
 
+    //create empty tab in empty group
+    if (openedTabs.length <= 0) {
+        const tab = new Tab(0, "about:blank");
+        const createdTab = await browser.tabs.create({
+            url: tab.url,
+            windowId: windowId
+        });
+        tab.id = createdTab.id;
+        openedTabs.push(tab);
+    }
+
     //close old tabs
-    const openedIds = group.tabs.map(tab => tab.id);
+    const openedIds = openedTabs.map(tab => tab.id);
     let allTabs = await getAllOpenedTabs();
     const idsToClose = allTabs
         .filter(tab => !openedIds.includes(tab.id))
@@ -145,15 +160,9 @@ async function openTabs(group) {
     await browser.tabs.remove(idsToClose);
 
     //update group after possible errors
-    allTabs = await getAllOpenedTabs();
-    const groupTabs = []
-    allTabs.forEach(tab => {
-        groupTabs.push(new Tab(tab.id, tab.url));
-    })
-    group.tabs = groupTabs;
-
-    //update after possible errors
+    group.tabs = openedTabs;
     await saveGroup(group, true);
+
     //save for updating in background
     await saveActiveGroup(group, true)
 }
@@ -173,6 +182,7 @@ async function getLatestWindow() {
 
 async function openGroupEditor() {
     const activeWindow = await getLatestWindow();
+    // console.log(activeWindow)
     const viewportWidth = Math.round(activeWindow.width * 0.6);
     const viewportHeight = Math.round(activeWindow.height * 0.5);
 
