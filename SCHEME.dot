@@ -1,0 +1,28 @@
+digraph G {
+
+    background,
+    sidebar,
+    editGroup,
+    settings
+
+
+    background -> editGroup [ label="open group. ActiveGroupChanged" ]
+    background -> sidebar [ label="open group. ReloadGroupButtons" ]
+    background -> sidebar [ label="create first group. UpdateActiveGroupButton" ]
+
+    sidebar -> background [ label="click group. OpenTabs" ]
+    sidebar -> editGroup [ label="click edit again. GroupChanged" ]
+
+    editGroup -> sidebar [ label="close. EditGroupClosed" ]
+    editGroup -> background [ label="update active. ActiveGroupUpdated" ]
+    editGroup -> background [ label="create first group . ActiveGroupUpdated" ]
+    editGroup -> sidebar [ label="update. ReloadGroupButtons" ]
+    editGroup -> background [ label="delete active. ActiveGroupDeleted" ]
+    editGroup -> background [ label="delete active. OpenFirstGroupTabs" ]
+    editGroup -> sidebar [ label="delete not active. ReloadGroupButtons" ]
+
+    settings -> background [ label="restore. RestoreBackup" ]
+    settings -> background [ label="update backup. ReinitBackupEvent" ]
+    settings -> sidebar [ label="change appearance. UpdateButtonsPadding" ]
+
+}
