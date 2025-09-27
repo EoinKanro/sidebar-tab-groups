@@ -15,7 +15,7 @@ import {
     getEnableBackup,
     getLastBackupTime,
     saveActiveGroupId,
-    saveActiveWindowId
+    saveActiveWindowId, saveBackupMinutes, saveEnableBackup
 } from "./data/localStorage.js";
 import {Tab} from "./data/tabs.js";
 import {deleteAllGroups, getAllGroups, saveGroup} from "./data/databaseStorage.js";
@@ -35,12 +35,24 @@ let backupInterval;
 await cleanTempData();
 await saveActiveWindowId((await getLatestWindow()).id);
 await openFirstGroup();
+await initDefaultBackupValues();
 await cleanInitBackupInterval();
 
 async function cleanTempData() {
     await deleteActiveGroupId();
     await deleteActiveWindowId();
     await deleteGroupToEditId();
+}
+
+//init on install
+async function initDefaultBackupValues() {
+    const backupMinutes = await getBackupMinutes();
+    if (backupMinutes) {
+        return;
+    }
+
+    await saveBackupMinutes(1440);
+    await saveEnableBackup(true);
 }
 
 //------------------------- Runtime messages listener --------------------------------
