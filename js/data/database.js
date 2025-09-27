@@ -11,9 +11,10 @@ import {
 indexedDB.deleteDatabase("SidebarTabGroups")
 
 export class Request {
-    constructor(storeName, data) {
+    constructor(storeName, data, id = 0) {
         this.storeName = storeName;
         this.data = data;
+        this.id = id;
     }
 }
 
@@ -47,7 +48,7 @@ export async function initDatabase() {
         if (result) {
             const answer = await result;
             if (message.command.startsWith("get")) {
-                notify(databaseAnswer, new Response(message.data.data, answer));
+                notify(databaseAnswer, new Response(message.data.id, answer));
             }
         }
     });
