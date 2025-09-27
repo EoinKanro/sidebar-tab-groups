@@ -208,7 +208,7 @@ async function createOrUpdateGroupButtonIconAndName(group) {
 async function createOrUpdateGroupButtonIndex(group) {
   await createOrUpdateGroupButton(group, (groupButton, group) => {
     const ref = tabButtons.children[group.index] ?? null;
-    parent.insertBefore(groupButton, ref);
+    groupButton.parentElement.insertBefore(groupButton, ref);
   });
 }
 
@@ -301,10 +301,10 @@ browser.storage.onChanged.addListener(async (changes, area) => {
         return;
       }
 
-      if ('name' in update.changes) {
+      if (update.changes.includes("name")) {
         await createOrUpdateGroupButtonIconAndName(update.data);
       }
-      if ('index' in update.changes) {
+      if (update.changes.includes("index")) {
         await createOrUpdateGroupButtonIndex(update.data);
       }
     } else if (deletedGroupName in changes) {

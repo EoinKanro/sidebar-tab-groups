@@ -484,16 +484,16 @@ browser.storage.onChanged.addListener(async (changes, area) => {
         return;
       }
 
-      const group = windowIdGroup[groupIdWindowId[groupChanges.data.id]];
+      const group = windowIdGroup.get(groupIdWindowId.get(groupChanges.data.id));
       if (group === undefined || !group) {
         console.warn("Update message expired", groupChanges);
         return;
       }
 
-      if ('name' in groupChanges.changes) {
+      if (groupChanges.changes.includes("name")) {
         group.name = groupChanges.data.name;
         group.icon = groupChanges.data.icon;
-      } else if ('index' in groupChanges.changes) {
+      } else if (groupChanges.changes.includes("index")) {
         group.index = groupChanges.data.index;
       }
 
