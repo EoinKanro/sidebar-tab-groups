@@ -258,7 +258,7 @@ async function processTabsActions() {
             const msg = await tabsActionQueue.take();
 
             if (msg.groupId !== activeGroup.id) {
-                console.log("Message is too old, skipping: ", msg);
+                console.warn("Message is too old, skipping: ", msg);
                 continue;
             }
 
