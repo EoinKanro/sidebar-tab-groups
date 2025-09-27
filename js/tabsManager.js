@@ -20,9 +20,13 @@ let contextTabDiv;
 
 //------------------------------- Init -----------------------------------
 
-browser.theme.getCurrent().then(theme => {
-    loadTheme(theme);
-})
+loadThemeFromBrowser();
+
+function loadThemeFromBrowser() {
+    browser.theme.getCurrent().then(theme => {
+        loadTheme(theme);
+    })
+}
 
 function loadTheme(theme) {
     updatePopupStyle(style, theme);
@@ -68,8 +72,6 @@ async function loadGroups() {
 
             const openedTab = allTabs.find(browserTab => tab.url === browserTab.url) || null;
             if (openedTab) {
-                console.log(openedTab);
-
                 //icon of actual tab
                 const tabDivIcon = document.createElement("img");
                 tabDivIcon.src = openedTab.favIconUrl;
@@ -223,6 +225,9 @@ saveButton.onclick = async function (event) {
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
+
+const lightSchemeMedia = window.matchMedia('(prefers-color-scheme: light)');
+lightSchemeMedia.addEventListener('change', loadThemeFromBrowser);
 
 //context menu actions
 browser.contextMenus.onClicked.addListener(handleContextMenuClick);

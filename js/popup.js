@@ -10,9 +10,13 @@ const style = getStyle("js-style");
 
 //------------------------------- Init -----------------------------------
 
-browser.theme.getCurrent().then(theme => {
-    loadTheme(theme);
-})
+loadThemeFromBrowser();
+
+function loadThemeFromBrowser() {
+    browser.theme.getCurrent().then(theme => {
+        loadTheme(theme);
+    })
+}
 
 function loadTheme(theme) {
     updatePopupStyle(style, theme);
@@ -24,6 +28,9 @@ function loadTheme(theme) {
 browser.theme.onUpdated.addListener(({theme}) => {
     loadTheme(theme);
 });
+
+const lightSchemeMedia = window.matchMedia('(prefers-color-scheme: light)');
+lightSchemeMedia.addEventListener('change', loadThemeFromBrowser);
 
 //open sidebar
 openSidebarButton.onclick = function () {

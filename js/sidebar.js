@@ -32,10 +32,13 @@ const styleButtonsPadding = getStyle("style-buttons-padding");
 
 await reloadGroupButtons();
 await loadButtonsPadding();
+loadThemeFromBrowser();
 
-browser.theme.getCurrent().then(theme => {
-    loadTheme(theme);
-})
+function loadThemeFromBrowser() {
+    browser.theme.getCurrent().then(theme => {
+        loadTheme(theme);
+    })
+}
 
 function loadTheme(theme) {
     updateSidebarStyle(styleTheme, theme);
@@ -51,6 +54,9 @@ async function loadButtonsPadding() {
 browser.theme.onUpdated.addListener(({ theme }) => {
     loadTheme(theme);
 });
+
+const lightSchemeMedia = window.matchMedia('(prefers-color-scheme: light)');
+lightSchemeMedia.addEventListener('change', loadThemeFromBrowser);
 
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
     try {
