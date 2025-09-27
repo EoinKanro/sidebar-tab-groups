@@ -19,7 +19,7 @@ import {
 } from "./data/localStorage.js";
 import {Tab} from "./data/tabs.js";
 import {deleteAllGroups, getAllGroups, saveGroup} from "./data/databaseStorage.js";
-import {backupGroups, getLatestWindow, openTabs} from "./service/utils.js";
+import {backupGroups, getLatestWindow, isUrlEmpty, openTabs} from "./service/utils.js";
 
 /**
  * Responsible for:
@@ -192,14 +192,14 @@ browser.tabs.onCreated.addListener(async (tab) => {
 
 //save tab if it was updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (isAvailableToUpdate(tab.windowId) && changeInfo.url) {
+    if (isAvailableToUpdate(tab.windowId) && !isUrlEmpty(changeInfo.url)) {
         const tabToChange = activeGroup.tabs.filter(tabF => tabF.id === tab.id)[0];
-        if (!tabToChange || tabToChange.url === tab.url) {
+        if (!tabToChange || tabToChange.url === changeInfo.url) {
             return
         }
 
-        console.log(`Updating tab info in current group: `, tab, activeGroup);
-        tabToChange.url = tab.url;
+        console.log(`Updating tab info in current group: `, changeInfo, activeGroup);
+        tabToChange.url = changeInfo.url;
 
         await save()
     }
