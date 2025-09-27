@@ -16,6 +16,7 @@ import {
     SidebarUpdateButtonsPadding
 } from "./service/events.js";
 import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
+import {backupGroups} from "./service/utils.js";
 
 //----------------------- Document elements ------------------------------
 
@@ -29,6 +30,7 @@ const restoreText = document.getElementById('restore-text');
 const restoreButton = document.getElementById('restore-button');
 const closeTabsCheckbox = document.getElementById('close-tabs-checkbox');
 const saveTabsButton = document.getElementById('save-tabs-button');
+const backupNowButton = document.getElementById('backup-now-button');
 
 //---------------------------- Init ----------------------------------------
 await init();
@@ -67,23 +69,6 @@ backupTime.oninput = function (event) {
     event.target.value = replaceNonDigits(event.target.value);
 };
 
-//Save backup settings
-saveBackupButton.onclick = async function () {
-    if (backupCheckbox.checked && (!backupTime.value || Number(backupTime.value) <= 0)) {
-        alert("Wrong value of minutes for backup");
-        return
-    }
-
-    await saveEnableBackup(backupCheckbox.checked);
-    await saveBackupMinutes(backupTime.value);
-    notify(new BackgroundReinitBackupEvent());
-
-    const alertText = backupCheckbox.checked ?
-        `Backup will be saved in Downloads every ${backupTime.value} minutes` :
-        `Backup switched off`;
-    alert(alertText);
-};
-
 //Reload from backup
 restoreButton.onclick = async function () {
     const restoreTextData = restoreText.value;
@@ -110,6 +95,32 @@ restoreButton.onclick = async function () {
 
     notify(new BackgroundRestoreBackup(restoreJson));
     alert("Restoration is complete. If something is wrong you can find a backup file right before the restoration in Downloads");
+};
+
+backupNowButton.onclick = async function (event) {
+    const result = await backupGroups();
+    if (result) {
+        alert("Backup was finished successfully.");
+    } else {
+        alert("Backup was finished with an error");
+    }
+}
+
+//Save backup settings
+saveBackupButton.onclick = async function () {
+    if (backupCheckbox.checked && (!backupTime.value || Number(backupTime.value) <= 0)) {
+        alert("Wrong value of minutes for backup");
+        return
+    }
+
+    await saveEnableBackup(backupCheckbox.checked);
+    await saveBackupMinutes(backupTime.value);
+    notify(new BackgroundReinitBackupEvent());
+
+    const alertText = backupCheckbox.checked ?
+        `Backup will be saved in Downloads every ${backupTime.value} minutes` :
+        `Backup switched off`;
+    alert(alertText);
 };
 
 //-------------------- Appearance listeners ------------------------

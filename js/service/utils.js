@@ -146,15 +146,20 @@ export async function backupGroups() {
 
     const name = `SidebarTabGroups/${now}.json`;
 
+    let error;
+
     // Use the downloads API to create the file in the Downloads folder
-    browser.downloads.download({
+    await browser.downloads.download({
         url: url,
         filename: name,
         saveAs: false  // Ask where to save the file
     }).then(async (downloadId) => {
         console.log(`Saved new backup: ${name}`);
         await saveLastBackupTime(now);
-    }).catch((error) => {
+    }).catch((e) => {
         console.error(`Error on backup: ${error}`);
+        error = e;
     });
+
+    return !error;
 }
