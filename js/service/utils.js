@@ -28,6 +28,7 @@ export async function getLatestWindow() {
     }
 }
 
+//-------------------- Open Tabs ------------------------
 /**
  * @returns {TabsGroup} group/null
  */
@@ -46,11 +47,38 @@ export async function openTabs(groupId) {
         return null;
     }
 
-    group.windowId = windowId;
+    //open all tabs from group
+    const openedTabs = await openTabsAndGetOpened(allTabs, windowId, group.tabs);
 
-    //open all tabs from group and save ids
+    //create empty tab in empty group
+    if (openedTabs.length <= 0) {
+        const tab = new Tab(0, "about:blank");
+        const createdTab = await openTab(tab.url, windowId);
+        tab.id = createdTab.id;
+        openedTabs.push(tab);
+    }
+
+    //close or hide old tabs
+    const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
+    const openedIds = openedTabs.map(tab => tab.id);
+    const tabsToClose = allTabs.filter(tab => !openedIds.includes(tab.id));
+
+    if (closeTabsOnChangeGroup) {
+        await closeTabs(tabsToClose);
+    } else {
+        await hideTabs(tabsToClose, openedIds, openedTabs, windowId);
+    }
+
+    group.windowId = windowId;
+    //update group after possible errors
+    group.tabs = openedTabs;
+
+    return group;
+}
+
+async function openTabsAndGetOpened(allTabs, windowId, tabsToOpen) {
     const openedTabs = [];
-    for (const tab of group.tabs) {
+    for (const tab of tabsToOpen) {
         try {
             //crunch
             if (tab === undefined || !tab || isUrlEmpty(tab.url)) {
@@ -60,21 +88,19 @@ export async function openTabs(groupId) {
             const url = tab.url;
 
             //try to find tab with the same url
-            let browserTab = findTab(allTabs, openedTabs, url);
+            let browserTab = findNotUsedTabByUrl(allTabs, openedTabs, url);
 
-            //create new one if can't find
-            if (!browserTab) {
-                if (url.startsWith("http")) {
-                    browserTab = await (browser.tabs.create({
-                        url: url,
-                        windowId: windowId
-                    }));
-                } else {
-                    browserTab = await (browser.tabs.create({
-                        url: await (browser.runtime.getURL(url)),
-                        windowId: windowId
-                    }));
+            if (browserTab !== undefined && browserTab) {
+                //update window id
+                if (browserTab.windowId !== windowId) {
+                    await browser.tabs.move(browserTab.id, {
+                        windowId: windowId,
+                        index: -1
+                    });
                 }
+            } else {
+                //create new tab
+                browserTab = await openTab(url, windowId);
             }
 
             tab.id = browserTab.id;
@@ -83,71 +109,11 @@ export async function openTabs(groupId) {
             console.error(`Can't open tab: ${tab}`, e);
         }
     }
-
-    //create empty tab in empty group
-    if (openedTabs.length <= 0) {
-        const tab = new Tab(0, "about:blank");
-        const createdTab = await (browser.tabs.create({
-            url: tab.url,
-            windowId: windowId
-        }));
-        tab.id = createdTab.id;
-        openedTabs.push(tab);
-    }
-
-    //close or hide old tabs
-    const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
-    const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
-    const openedIds = openedTabs.map(tab => tab.id);
-    const tabsToClose = allTabs
-        .filter(tab => !openedIds.includes(tab.id));
-
-
-    if (!closeTabsOnChangeGroup) {
-        //show openedTabs
-        await browser.tabs.show(openedIds);
-        //set last active
-        await browser.tabs.update(openedIds[openedIds.length - 1], { active: true });
-        //sort
-        for (let i = 0; i < openedTabs.length; i++) {
-            await browser.tabs.move(openedTabs[i].id, { index: i });
-        }
-        //hide
-        for (const tab of tabsToClose) {
-            try {
-                //close empty tabs
-                if (isUrlEmpty(tab.url)) {
-                    await browser.tabs.remove(tab.id);
-                    continue
-                }
-
-                if (stopTabsActivityOnChangeGroup) {
-                    await browser.tabs.discard(tab.id);
-                }
-                await browser.tabs.hide(tab.id);
-            } catch (e) {
-                console.log(`Can't hide tab: ${tab.id}`, e);
-            }
-        }
-    } else {
-        //close
-        for (const tab of tabsToClose) {
-            try {
-                await browser.tabs.remove(tab.id);
-            } catch (e) {
-                console.log(`Can't remove tab: ${tab.id}`, e);
-            }
-        }
-    }
-
-    //update group after possible errors
-    group.tabs = openedTabs;
-
-    return group;
+    return openedTabs;
 }
 
 //find tab in all tabs that doesn't have the id from openedTabs to reuse
-function findTab(allTabs, openedTabs, url) {
+function findNotUsedTabByUrl(allTabs, openedTabs, url) {
     const browserTabsWithSameUrl = allTabs.filter(tab => tab.url === url);
     if (browserTabsWithSameUrl && browserTabsWithSameUrl.length > 0) {
         return browserTabsWithSameUrl.find(browserTab =>
@@ -155,6 +121,53 @@ function findTab(allTabs, openedTabs, url) {
         );
     }
     return null;
+}
+
+async function openTab(url, windowId) {
+    return await (browser.tabs.create({
+        url: url,
+        windowId: windowId
+    }));
+}
+
+async function hideTabs(tabsToClose, openedIds, openedTabs, windowId) {
+    const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
+
+    //show openedTabs
+    await browser.tabs.show(openedIds);
+    //set last active
+    await browser.tabs.update(openedIds[openedIds.length - 1], { active: true });
+    //sort
+    for (let i = 0; i < openedTabs.length; i++) {
+        await browser.tabs.move(openedTabs[i].id, { index: i });
+    }
+    //hide
+    for (const tab of tabsToClose) {
+        try {
+            //close empty or from different window tabs
+            if (tab.windowId !== windowId || isUrlEmpty(tab.url)) {
+                await browser.tabs.remove(tab.id);
+                continue
+            }
+
+            if (stopTabsActivityOnChangeGroup) {
+                await browser.tabs.discard(tab.id);
+            }
+            await browser.tabs.hide(tab.id);
+        } catch (e) {
+            console.log(`Can't hide tab: ${tab.id}`, e);
+        }
+    }
+}
+
+async function closeTabs(tabsToClose) {
+    for (const tab of tabsToClose) {
+        try {
+            await browser.tabs.remove(tab.id);
+        } catch (e) {
+            console.log(`Can't remove tab: ${tab.id}`, e);
+        }
+    }
 }
 
 //------------------------ Backup ---------------------
