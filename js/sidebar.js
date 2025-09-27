@@ -7,15 +7,17 @@ class Tab {
     }
 }
 
+await saveCurrentGroup(null);
+
 // Event listener for creating a new group
 document.getElementById('create-group').addEventListener('click', createNewGroup);
 
 async function createNewGroup() {
     //todo popup
 
-    const currentGroup = await getCurrentGroup()
+    const currentGroup = await getCurrentGroup();
 
-    let newGroup
+    let newGroup;
     if (!currentGroup) {
         //save current tabs to new group if there is no currentGroup
         const allTabs = await getAllTabs();
@@ -24,18 +26,18 @@ async function createNewGroup() {
             "title",
             "check_box",
             allTabs.map(tab => new Tab(tab.id, tab.url))
-        )
+        );
     } else {
         newGroup = new TabsGroup(new Date().getTime(),
             "title",
             "check_box",
             []
-        )
+        );
     }
 
     //save group to storage and create button
     await saveGroup(newGroup);
-    await createButton(newGroup)
+    await createButton(newGroup);
 }
 
 async function createButton(group) {
@@ -66,12 +68,12 @@ async function createButton(group) {
 // Open the tabs of selected group
 async function openTabs(group) {
     //save null to prevent updating group in background
-    await saveCurrentGroup(null)
+    await saveCurrentGroup(null);
 
     //filter unsupported links
     group.tabs = group.tabs
         .filter(tab => !tab.url.startsWith("about:") || tab.url === "about:blank")
-        .map(tab => tab)
+        .map(tab => tab);
 
     //create empty tab in empty group
     if (group.tabs.length <= 0) {
@@ -82,20 +84,20 @@ async function openTabs(group) {
     for (const tab of group.tabs) {
         const createdTab = await browser.tabs.create({
             url: tab.url
-        })
+        });
         tab.id = createdTab.id;
     }
 
     //close old tabs
     const openedIds = group.tabs.map(tab => tab.id);
-    const allTabs = await getAllTabs()
+    const allTabs = await getAllTabs();
     const idsToClose = allTabs
         .filter(tab => !openedIds.includes(tab.id))
         .map(tab => tab.id);
     await browser.tabs.remove(idsToClose);
 
     //save for performing update in background
-    await saveCurrentGroup(group)
+    await saveCurrentGroup(group);
 }
 
 // Load and display existing tab groups when the sidebar opens
