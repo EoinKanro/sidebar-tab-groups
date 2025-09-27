@@ -1,6 +1,17 @@
-import {TabsGroup, getGroupToEdit, saveGroupToEdit, saveGroup, saveGroupToUpdate, deleteGroup} from "./tabsGroup.js";
+import {
+    TabsGroup,
+    getGroupToEdit,
+    saveGroup,
+    deleteGroup,
+    deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab, saveActiveGroup
+} from "./data/dataStorage.js";
 
-let tempGroup = await getGroupToEdit();
+import {
+    notify,
+    notifySidebarReloadGroups
+} from "./data/events.js";
+
+const groupToEdit = await getGroupToEdit();
 const symbols = await (await fetch('../font/google-symbols.json')).json();
 
 const groupName = document.getElementById("group-name");
@@ -9,10 +20,10 @@ const iconSelected = document.getElementById("icon-selected");
 const deleteButton = document.getElementById("delete");
 
 //load tempGroup on open page
-if (tempGroup) {
+if (groupToEdit) {
     document.getElementById('group-header').textContent = 'Edit Group';
-    groupName.value = tempGroup.name;
-    iconSelected.textContent = tempGroup.icon;
+    groupName.value = groupToEdit.name;
+    iconSelected.textContent = groupToEdit.icon;
     deleteButton.style.visibility = '';
 } else {
     document.getElementById('group-header').textContent = 'New Group';
@@ -37,16 +48,28 @@ symbols.symbols.forEach(symbol => {
 
 //save group
 document.getElementById('submit').onclick = async function () {
-    if (tempGroup) {
-        tempGroup.name = groupName.value;
-        tempGroup.icon = iconSelected.textContent;
-    } else {
-        tempGroup = new TabsGroup(new Date().getTime(), groupName.value, iconSelected.textContent, []);
+    const group = new TabsGroup(groupName.value, iconSelected.textContent);
+
+    //save current tabs to new group if there is no currentGroup
+    const activeGroup = await getActiveGroup();
+    if (!activeGroup) {
+        const allTabs = await getAllOpenedTabs();
+        group.tabs = allTabs.map(tab => new Tab(tab.id, tab.url));
     }
 
-    await saveGroup(tempGroup);
-    await saveGroupToEdit(null);
-    await saveGroupToUpdate(tempGroup);
+    //set id if it's an update
+    if (groupToEdit) {
+        group.id = groupToEdit.id;
+    }
+
+    await saveGroup(group, false);
+    await deleteGroupToEdit();
+
+    //notify background if we changed active group
+    if (!activeGroup || activeGroup.id === group.id) {
+        await saveActiveGroup(group, true);
+    }
+    notify(notifySidebarReloadGroups, null);
     window.close();
 };
 
@@ -54,10 +77,10 @@ document.getElementById('submit').onclick = async function () {
 deleteButton.onclick = async function () {
     let confirmDelete = confirm("Are you sure you want to delete this group?");
 
+    //TODO change group if active. mb notify sidebar
     if (confirmDelete) {
-        await deleteGroup(tempGroup);
-        //todo fix
-        await saveGroupToUpdate(tempGroup);
+        await deleteGroup(groupToEdit, false);
+        notify(notifySidebarReloadGroups, null);
         window.close();
     }
 }
