@@ -53,7 +53,6 @@ import {Logger} from "./service/logUtils.js";
 
 //-------------------- Temp Data ---------------------
 
-//todo bug on change group. it doesnt let you change it in the same window
 const windowIdGroup = new Map();
 const groupIdWindowId = new Map();
 const tabsActionQueue = new BlockingQueue();
@@ -116,7 +115,7 @@ async function closeAllAndOpenFirstGroup() {
   }
 
   const firstGroup = allGroups.reduce((lowest, current) => {
-    return current.index < lowest.index ? current : lowest;
+    return current.index < lowest.index && current.index >= 0 ? current : lowest;
   }, allGroups[0]);
 
   await openGroup(firstGroup.id, null);
