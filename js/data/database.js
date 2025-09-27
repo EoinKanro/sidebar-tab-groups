@@ -21,7 +21,7 @@ let db;
 export async function initDatabase() {
     //Initialize database requests handlers for outside contexts
      await browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-        console.log("got db request", message);
+        console.log("Got message from runtime:", message);
         let result;
 
         if (message.command === getFromDatabase) {
