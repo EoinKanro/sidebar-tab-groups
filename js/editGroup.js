@@ -68,7 +68,7 @@ document.getElementById('submit').onclick = async function () {
         group.tabs = groupToEdit.tabs;
     }
 
-    await saveGroup(group, false);
+    await saveGroup(group);
     await deleteGroupToEdit();
 
     //notify background if there is no active group or we've updated active group
@@ -84,11 +84,11 @@ deleteButton.onclick = async function () {
     let confirmDelete = confirm("Are you sure you want to delete this group?");
 
     if (confirmDelete) {
-        await deleteGroup(groupToEdit.id, false);
+        await deleteGroup(groupToEdit.id);
 
         let openTabs = false;
         if (groupToEdit.id === activeGroup.id) {
-            const allGroups = await getAllGroups(false);
+            const allGroups = await getAllGroups();
 
             if (allGroups && allGroups.length > 0) {
                 await saveActiveGroup(allGroups[0], true);

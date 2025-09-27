@@ -6,15 +6,6 @@ export class EventMessage {
 }
 
 /**
- * Database requests
- */
-export const getFromDatabase = "getFromDatabase";
-export const getAllFromDatabase = "getAllFromDatabase";
-export const saveInDatabase = "saveInDatabase";
-export const deleteFromDatabase = "deleteFromDatabase";
-export const databaseAnswer = "databaseAnswer";
-
-/**
  * Background requests
  */
 export const notifyBackgroundCurrentGroupUpdated = "notifyBackgroundCurrentGroupUpdated";

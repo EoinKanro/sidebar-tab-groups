@@ -14,7 +14,7 @@ export async function getLatestWindow() {
 }
 
 // Open the tabs of selected group
-export async function openTabs(group, isNotify, currentContext) {
+export async function openTabs(group, isNotify) {
     console.log("Opening tabs", group)
     //delete to prevent updating group in background
     await deleteActiveGroup(isNotify);
@@ -69,7 +69,7 @@ export async function openTabs(group, isNotify, currentContext) {
 
     //update group after possible errors
     group.tabs = openedTabs;
-    await saveGroup(group, currentContext);
+    await saveGroup(group);
 
     //save for updating in background
     await saveActiveGroup(group, isNotify)

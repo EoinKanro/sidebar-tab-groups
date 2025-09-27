@@ -1,54 +1,11 @@
-import {
-    getFromDatabase,
-    getAllFromDatabase,
-    saveInDatabase,
-    deleteFromDatabase,
-    notify,
-    databaseAnswer
-} from "./events.js"
-
-export class Request {
-    constructor(storeName, data, id = "") {
-        this.storeName = storeName;
-        this.data = data;
-        this.id = id;
-    }
-}
-
-export class Response {
-    constructor(id, data) {
-        this.id = id;
-        this.data = data;
-    }
-}
-
 export const tabGroupsName = "tab-groups";
 
 let db;
 
-export async function initDatabase() {
-    //Initialize database requests handlers for outside contexts
-    browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-        let result;
-
-        //message - EventMessage from events.js. message.data - Request
-        if (message.command === getFromDatabase) {
-            result = getData(message.data);
-        } else if (message.command === getAllFromDatabase) {
-            result = getAllData(message.data);
-        } else if (message.command === saveInDatabase) {
-            result = saveData(message.data)
-        } else if (message.command === deleteFromDatabase) {
-            result = deleteData(message.data);
-        }
-
-        if (result) {
-            const answer = await result;
-            if (message.command.startsWith("get")) {
-                notify(databaseAnswer, new Response(message.data.id, answer));
-            }
-        }
-    });
+async function getDatabase() {
+    if (db) {
+        return db;
+    }
 
     return new Promise((resolve, reject) => {
         //Open database
@@ -81,90 +38,109 @@ export async function initDatabase() {
 /**
  * @returns {Promise<unknown>} array/null
  */
-export function getAllData(request) {
-    console.log(`Getting all from ${request.storeName}`)
+export function getAllData(storeName) {
+    console.log(`Getting all from ${storeName}`)
 
     return new Promise(async (resolve) => {
-        const transaction = db.transaction([request.storeName], "readonly");
-        const store = transaction.objectStore(request.storeName);
+        try {
+            const db = await getDatabase();
+            const transaction = db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
 
-        const requestDb = store.getAll();
+            const requestDb = store.getAll();
 
-        requestDb.onsuccess = function(event) {
-            console.log(`Got all successfully: `, event.target.result)
-            resolve(event.target.result);
-        };
+            requestDb.onsuccess = function(event) {
+                console.log(`Got all successfully: `, event.target.result)
+                resolve(event.target.result);
+            };
 
-        requestDb.onerror = function(event) {
-            console.log(`Got all with error: `, event)
+            requestDb.onerror = function(event) {
+                console.log(`Got all with error: `, event)
+                resolve(null);
+            };
+        } catch (e) {
             resolve(null);
-        };
+        }
     });
 }
 
 /**
  * @returns {Promise<unknown>} obj/null
  */
-export function getData(request) {
-    console.log(`Getting data ${request.data} from ${request.storeName}`)
+export function getData(storeName, key) {
+    console.log(`Getting data ${key} from ${storeName}`)
 
     return new Promise(async (resolve, reject) => {
-        const transaction = db.transaction([request.storeName], "readonly");
-        const store = transaction.objectStore(request.storeName);
+        try {
+            const db = await getDatabase();
+            const transaction = db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
 
-        const requestDb = store.get(request.data);
-        requestDb.onsuccess = function (event) {
-            console.log(`Got successfully: `, request.data, event.target.result);
-            resolve(event.target.result || null);
-        };
-        requestDb.onerror = function (event) {
-            console.log(`Got with error. `, request.data, event);
+            const requestDb = store.get(key);
+            requestDb.onsuccess = function (event) {
+                console.log(`Got successfully: `, key, event.target.result);
+                resolve(event.target.result || null);
+            };
+            requestDb.onerror = function (event) {
+                console.log(`Got with error. `, key, event);
+                resolve(null);
+            };
+        } catch (e) {
             resolve(null);
-        };
+        }
     });
 }
 
 /**
  * @returns {Promise<unknown>} true/false
  */
-export function saveData(request) {
-    console.log(`Saving data in ${request.storeName}`, request.data)
+export function saveData(storeName, data) {
+    console.log(`Saving data in ${storeName}`, data)
 
     return new Promise(async (resolve) => {
-        const transaction = db.transaction([request.storeName], "readwrite");
-        const store = transaction.objectStore(request.storeName);
+        try {
+            const db = await getDatabase();
+            const transaction = db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
 
-        const requestDb = store.put(request.data);
-        requestDb.onsuccess = function (event) {
-            console.log(`Saved successfully: `, request.data);
-            resolve(true);
-        };
-        requestDb.onerror = function (event) {
-            console.log(`Saved with error. `, request.data, event);
+            const requestDb = store.put(data);
+            requestDb.onsuccess = function (event) {
+                console.log(`Saved successfully: `, data);
+                resolve(true);
+            };
+            requestDb.onerror = function (event) {
+                console.log(`Saved with error. `, data, event);
+                resolve(false);
+            };
+        } catch (e) {
             resolve(false);
-        };
+        }
     });
 }
 
 /**
  * @returns {Promise<unknown>} true/false
  */
-export function deleteData(request) {
-    console.log(`Deleting ${request.data} from ${request.storeName}`)
+export function deleteData(storeName, key) {
+    console.log(`Deleting ${key} from ${storeName}`)
 
     return new Promise(async (resolve) => {
-        const transaction = db.transaction([request.storeName], "readwrite");
-        const store = transaction.objectStore(request.storeName);
+        try {
+            const db = await getDatabase();
+            const transaction = db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
 
-        const requestDb = store.delete(request.data);
-        requestDb.onsuccess = function (event) {
-            console.log(`Deleted successfully: `, request.data);
-            resolve(true);
-        };
-        requestDb.onerror = function (event) {
-            console.log(`Got data with error.`, request.data, event);
+            const requestDb = store.delete(key);
+            requestDb.onsuccess = function (event) {
+                console.log(`Deleted successfully: `, key);
+                resolve(true);
+            };
+            requestDb.onerror = function (event) {
+                console.log(`Got data with error.`, key, event);
+                resolve(false);
+            };
+        } catch (e) {
             resolve(false);
-        };
+        }
     });
 }
-

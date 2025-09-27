@@ -6,18 +6,15 @@ import {
     getAllGroups,
     saveActiveGroup, saveWindowId
 } from "./data/dataStorage.js";
-import {notifyBackgroundCurrentGroupUpdated} from "./data/events.js"
 
-import {initDatabase} from "./data/database.js";
+import {notifyBackgroundCurrentGroupUpdated} from "./data/events.js"
 import {getLatestWindow, openTabs} from "./data/utils.js";
 
 let activeGroup;
 
-//init database and open tabs of first group if exists
+//clear temp data and open tabs of first group
 await init();
 async function init() {
-    await initDatabase();
-
     //clear temp data
     await deleteActiveGroup(false);
     await deleteGroupToEdit();
@@ -31,7 +28,7 @@ async function init() {
 
         activeGroup.windowId = windowId;
         await saveActiveGroup(activeGroup, false);
-        await openTabs(activeGroup, false, true);
+        await openTabs(activeGroup, false);
         console.log("Initialized current group", activeGroup);
     }
 }
@@ -89,5 +86,5 @@ function isAvailableToUpdate(windowId) {
 }
 
 async function save() {
-    await saveGroup(activeGroup, true)
+    await saveGroup(activeGroup)
 }

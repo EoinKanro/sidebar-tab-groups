@@ -1,14 +1,6 @@
-import {
-    getFromDatabase,
-    getAllFromDatabase,
-    saveInDatabase,
-    deleteFromDatabase,
-    notifyBackgroundCurrentGroupUpdated,
-    databaseAnswer,
-    notify
-} from "./events.js"
+import {notifyBackgroundCurrentGroupUpdated, notify} from "./events.js"
 
-import {tabGroupsName, Request, getData, getAllData, saveData, deleteData} from "./database.js"
+import {tabGroupsName, getData, getAllData, saveData, deleteData} from "./database.js"
 
 export class TabsGroup {
     constructor(name, icon) {
@@ -40,29 +32,29 @@ export async function getAllOpenedTabs() {
 /**
  * @returns {Promise<unknown>} group/null
  */
-export async function getGroup(groupId, currentContext) {
-    return await sendRequestToDatabase(getFromDatabase, tabGroupsName, groupId, currentContext);
-}
-
-/**
- * @returns {Promise<unknown>} true/false/null
- */
-export async function saveGroup(group, currentContext) {
-    return await sendRequestToDatabase(saveInDatabase, tabGroupsName, group, currentContext);
+export async function getGroup(groupId) {
+    return await getData(tabGroupsName, groupId);
 }
 
 /**
  * @returns {Promise<unknown>} true/false
  */
-export async function deleteGroup(groupId, currentContext) {
-    return await sendRequestToDatabase(deleteFromDatabase, tabGroupsName, groupId, currentContext);
+export async function saveGroup(group) {
+    return await saveData(tabGroupsName, group);
+}
+
+/**
+ * @returns {Promise<unknown>} true/false
+ */
+export async function deleteGroup(groupId) {
+    return await deleteData(tabGroupsName, groupId);
 }
 
 /**
  * @returns {Promise<unknown>} array/null
  */
-export async function getAllGroups(currentContext) {
-    return await sendRequestToDatabase(getAllFromDatabase, tabGroupsName,null, currentContext);
+export async function getAllGroups() {
+    return await getAllData(tabGroupsName);
 }
 
 
@@ -117,55 +109,4 @@ async function getFromLocalStorage(key) {
 
 async function saveToLocalStorage(key, value) {
     await browser.storage.local.set({ [key]: value });
-}
-
-function sendRequestToDatabase(event, storeName, data, currentContext) {
-    if (currentContext) {
-        return sendRequestToDatabaseCurrentContext(event, storeName, data);
-    }
-    return sendRequestToDatabaseSeparateContext(event, storeName, data);
-
-}
-
-function sendRequestToDatabaseCurrentContext(event, storeName, data) {
-    return new Promise(async (resolve, reject) => {
-        let result;
-        const request = new Request(storeName, data);
-        if (event === getFromDatabase) {
-            result = await getData(request);
-        } else if (event === getAllFromDatabase) {
-            result = await getAllData(request);
-        } else if (event === saveInDatabase) {
-            result = await saveData(request)
-        } else if (event === deleteFromDatabase) {
-            result = await deleteData(request);
-        }
-
-        if (result) {
-            resolve(result);
-        }
-        resolve(null);
-    })
-}
-
-function sendRequestToDatabaseSeparateContext(event, storeName, data) {
-    return new Promise(async (resolve, reject) => {
-        const messageToSend = new Request(storeName, data, crypto.randomUUID());
-
-        if (event.startsWith("get")) {
-            const tempListener = (message, sender, sendResponse) => {
-                //message - EventMessage from events.js. message.data - Response from database.js
-                if (message.command === databaseAnswer && message.data.id === messageToSend.id) {
-                    browser.runtime.onMessage.removeListener(tempListener);
-                    resolve(message.data.data);
-                }
-            }
-
-            await browser.runtime.onMessage.addListener(tempListener);
-            notify(event, messageToSend);
-        } else {
-            notify(event, messageToSend);
-            resolve(null);
-        }
-    })
 }
