@@ -103,23 +103,38 @@ async function loadGroupToEdit() {
 
 
 const symbols = await (await fetch('../font/google-symbols.json')).json();
+const iconSearch = document.getElementById("icon-search")
 const iconsList = document.getElementById("icons-list");
 
 //load symbols to selector
-symbols.symbols.forEach(symbol => {
-    const button = document.createElement('button');
-    button.classList.add("button-class");
-
-    const span = document.createElement('span');
-    span.classList.add('material-symbols-outlined');
-    span.classList.add('icon-span');
-    span.textContent = symbol;
-
-    button.appendChild(span);
-    button.onclick = function () {
-        iconSelected.textContent = symbol;
+loadIcons();
+function loadIcons() {
+    let iconsToLoad = symbols.symbols;
+    if (iconSearch.value) {
+        iconsToLoad = iconsToLoad.filter((icon) => icon.includes(iconSearch.value));
     }
-    iconsList.appendChild(button);
+
+    iconsList.innerHTML = "";
+
+    iconsToLoad.forEach(symbol => {
+        const button = document.createElement('button');
+        button.classList.add("button-class");
+
+        const span = document.createElement('span');
+        span.classList.add('material-symbols-outlined');
+        span.classList.add('icon-span');
+        span.textContent = symbol;
+
+        button.appendChild(span);
+        button.onclick = function () {
+            iconSelected.textContent = symbol;
+        }
+        iconsList.appendChild(button);
+    })
+}
+
+iconSearch.addEventListener("input", () => {
+    loadIcons();
 })
 
 //save group
