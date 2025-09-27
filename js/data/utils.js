@@ -2,6 +2,7 @@ import {
     deleteActiveGroup,
     getAllGroups,
     getAllOpenedTabs,
+    getDontCloseTabs,
     getWindowId,
     saveActiveGroup,
     saveGroup,
@@ -27,30 +28,37 @@ export async function openTabs(group, notifyBackground) {
     console.log("Opening tabs", group)
     //delete to prevent updating group in background
     await deleteActiveGroup(notifyBackground);
+
+    const allTabs = await getAllOpenedTabs();
     const windowId = await getWindowId();
 
     group.windowId = windowId;
 
     //open all tabs from group and save ids
-    let openedTabs = [];
+    const openedTabs = [];
     for (const tab of group.tabs) {
         try {
             const url = tab.url;
 
-            let createdTab;
-            if (url.startsWith("http")) {
-                createdTab = await browser.tabs.create({
-                    url: tab.url,
-                    windowId: windowId
-                });
-            } else {
-                createdTab = await browser.tabs.create({
-                    url: browser.runtime.getURL(url),
-                    windowId: windowId
-                });
+            //try to find tab with the same url
+            let browserTab = findTab(allTabs, openedTabs, url);
+
+            //create new one if can't find
+            if (!browserTab) {
+                if (url.startsWith("http")) {
+                    browserTab = await browser.tabs.create({
+                        url: tab.url,
+                        windowId: windowId
+                    });
+                } else {
+                    browserTab = await browser.tabs.create({
+                        url: browser.runtime.getURL(url),
+                        windowId: windowId
+                    });
+                }
             }
 
-            tab.id = createdTab.id;
+            tab.id = browserTab.id;
             openedTabs.push(tab);
         } catch (e) {
             console.error(`Can't open tab: ${tab.url}`);
@@ -68,13 +76,25 @@ export async function openTabs(group, notifyBackground) {
         openedTabs.push(tab);
     }
 
-    //close old tabs
+    //close or hide old tabs
+    const dontCloseTabs = await getDontCloseTabs();
     const openedIds = openedTabs.map(tab => tab.id);
-    let allTabs = await getAllOpenedTabs();
-    const idsToClose = allTabs
+    const idsToCloseOrHide = allTabs
         .filter(tab => !openedIds.includes(tab.id))
         .map(tab => tab.id);
-    await browser.tabs.remove(idsToClose);
+
+    if (dontCloseTabs) {
+        //show openedTabs, sort them, then hide tabs not from current group
+        await browser.tabs.show(openedIds);
+        await browser.tabs.update(openedIds[openedIds.length - 1], { active: true });
+        for (let i = 0; i < openedTabs.length; i++) {
+            await browser.tabs.move(openedTabs[i].id, { index: i });
+        }
+        await browser.tabs.hide(idsToCloseOrHide);
+    } else {
+        //just close tabs not from current group
+        await browser.tabs.remove(idsToCloseOrHide);
+    }
 
     //update group after possible errors
     group.tabs = openedTabs;
@@ -82,6 +102,17 @@ export async function openTabs(group, notifyBackground) {
 
     //save for updating in background
     await saveActiveGroup(group, notifyBackground)
+}
+
+//find tab in all tabs that doesn't have the id from openedTabs to reuse
+function findTab(allTabs, openedTabs, url) {
+    const browserTabsWithSameUrl = allTabs.filter(tab => tab.url === url);
+    if (browserTabsWithSameUrl && browserTabsWithSameUrl.length > 0) {
+        return browserTabsWithSameUrl.find(browserTab =>
+            !openedTabs.some(tab => tab.id === browserTab.id)
+        );
+    }
+    return null;
 }
 
 //save to Downloads
