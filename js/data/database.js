@@ -32,6 +32,35 @@ export function getAllData(storeName) {
 }
 
 /**
+ * @returns {Promise<unknown>} true/false
+ */
+export function deleteAllData(storeName) {
+    console.log(`Deleting all from ${storeName}`)
+
+    return new Promise(async (resolve) => {
+        try {
+            const db = await getDatabase();
+            const transaction = db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
+
+            const requestDb = store.clear();
+
+            requestDb.onsuccess = function(event) {
+                console.log(`Delete all successfully: `, event.target.result)
+                resolve(true);
+            };
+
+            requestDb.onerror = function(event) {
+                console.log(`Delete all with error: `, event)
+                resolve(false);
+            };
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
+/**
  * @returns {Promise<unknown>} obj/null
  */
 export function getData(storeName, key) {

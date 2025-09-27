@@ -1,6 +1,6 @@
 import {notifyBackgroundCurrentGroupUpdated, notify} from "./events.js"
 
-import {tabGroupsName, getData, getAllData, saveData, deleteData} from "./database.js"
+import {tabGroupsName, getData, getAllData, saveData, deleteData, deleteAllData} from "./database.js"
 
 export class TabsGroup {
     constructor(name, icon) {
@@ -58,6 +58,13 @@ export async function deleteGroup(groupId) {
  */
 export async function getAllGroups() {
     return await getAllData(tabGroupsName);
+}
+
+/**
+ * @returns {Promise<unknown>} true/false
+ */
+export async function deleteAllGroups() {
+    return await deleteAllData(tabGroupsName);
 }
 
 
