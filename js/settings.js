@@ -60,9 +60,7 @@ async function init() {
         tabsBehaviorSelect.appendChild(opt);
     });
 
-    console.log(tabsBehaviorOnChangeGroup)
     let selectedTabsBehaviorValue = Object.values(TABS_BEHAVIOR).find(valueF => valueF === tabsBehaviorOnChangeGroup);
-    console.log(selectedTabsBehaviorValue);
     if (selectedTabsBehaviorValue === undefined || !selectedTabsBehaviorValue) {
         selectedTabsBehaviorValue = TABS_BEHAVIOR.SUSPEND;
     }
