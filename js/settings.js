@@ -3,11 +3,11 @@ import {
     getBackupMinutes,
     getCloseTabsOnChangeGroup,
     getEnableBackup,
-    getSidebarButtonsPaddingPx,
+    getSidebarButtonsPaddingPx, getStopTabsActivityOnChangeGroup,
     saveBackupMinutes,
     saveCloseTabsOnChangeGroup,
     saveEnableBackup,
-    saveSidebarButtonsPaddingPx
+    saveSidebarButtonsPaddingPx, saveStopTabsActivityOnChangeGroup
 } from "./data/localStorage.js";
 import {
     BackgroundReinitBackupEvent,
@@ -25,12 +25,13 @@ const sidebarButtonsPadding = document.getElementById('sidebar-buttons-padding')
 const saveAppearanceButton = document.getElementById('save-appearance-button');
 const backupCheckbox = document.getElementById('backup-checkbox');
 const backupTime = document.getElementById('backup-time');
+const backupNowButton = document.getElementById('backup-now-button');
 const saveBackupButton = document.getElementById('save-backup-button');
 const restoreText = document.getElementById('restore-text');
 const restoreButton = document.getElementById('restore-button');
 const closeTabsCheckbox = document.getElementById('close-tabs-checkbox');
+const stopTabsActivityCheckbox = document.getElementById('stop-tabs-activity-checkbox');
 const saveTabsButton = document.getElementById('save-tabs-button');
-const backupNowButton = document.getElementById('backup-now-button');
 
 //---------------------------- Init ----------------------------------------
 await init();
@@ -40,6 +41,7 @@ async function init() {
     const isBackup = await getEnableBackup();
     const backupMinutes = await getBackupMinutes();
     const isCloseTabs = await getCloseTabsOnChangeGroup();
+    const isStopTabsActivity = await getStopTabsActivityOnChangeGroup();
 
     //Set data from store
     if (sidebarButtonsPaddingPx) {
@@ -52,6 +54,7 @@ async function init() {
     }
 
     closeTabsCheckbox.checked = isCloseTabs;
+    stopTabsActivityCheckbox.checked = isStopTabsActivity;
 }
 
 browser.theme.getCurrent().then(theme => {
@@ -147,6 +150,7 @@ saveAppearanceButton.onclick = async function () {
 //Save tab settings
 saveTabsButton.onclick = async function () {
     await saveCloseTabsOnChangeGroup(closeTabsCheckbox.checked);
+    await saveStopTabsActivityOnChangeGroup(stopTabsActivityCheckbox.checked);
     alert("Tabs settings are updated");
 };
 
