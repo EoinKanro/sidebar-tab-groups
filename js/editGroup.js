@@ -61,9 +61,10 @@ document.getElementById('submit').onclick = async function () {
             .map(tab => new Tab(tab.id, tab.url));
     }
 
-    //set id if it's an update
+    //set data if it's an update
     if (groupToEdit) {
         group.id = groupToEdit.id;
+        group.tabs = groupToEdit.tabs;
     }
 
     await saveGroup(group, false);

@@ -10,14 +10,7 @@ browser.runtime.onInstalled.addListener(() => {
 //save currentGroup to temp variable on update
 browser.runtime.onMessage.addListener( (message, sender, sendResponse) => {
     if (message.command === notifyBackgroundCurrentGroupUpdated) {
-        if (activeGroup && message.data && activeGroup.id === message.data.id) {
-            activeGroup.name = message.data.name;
-            activeGroup.windowId = message.data.windowId;
-            activeGroup.name = message.data.name;
-            activeGroup.icon = message.data.icon;
-        } else {
-            activeGroup = message.data;
-        }
+        activeGroup = message.data;
 
         console.log("Current group received:", activeGroup);
     }
