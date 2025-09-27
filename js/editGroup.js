@@ -1,36 +1,110 @@
 import {
-    TabsGroup,
-    getGroupToEdit,
-    saveGroup,
-    deleteGroup,
-    deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab, saveActiveGroup, getWindowId, getAllGroups
+    TabsGroup, getGroupToEdit, saveGroup, deleteGroup, deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab,
+    saveActiveGroup, getWindowId, getAllGroups
 } from "./data/dataStorage.js";
 
 import {
     notify,
+    notifyBackgroundCurrentGroupUpdated,
+    notifyEditGroupReloadGroup,
+    notifySidebarEditGroupIsClosed,
     notifySidebarReloadGroups
 } from "./data/events.js";
 
-const groupToEdit = await getGroupToEdit();
-const activeGroup = await getActiveGroup();
+//notify sidebar that the window is closed
+window.addEventListener('unload', () => {
+    notify(notifySidebarEditGroupIsClosed, null);
+});
+
+//load style
+let style = document.getElementById("js-style")
+if (!style) {
+    style = document.createElement('style');
+    style.id = "js-style";
+    document.head.appendChild(style);
+}
+browser.theme.getCurrent().then(theme => {
+    let colors;
+    if (theme?.colors) {
+        colors = theme.colors;
+    } else {
+        colors = {};
+        colors.popup = "#fff";
+        colors.popup_text = "rgb(21,20,26)";
+        colors.button = "rgba(207,207,216,.33)";
+        colors.button_active = "rgb(207,207,216)";
+    }
+
+    style.innerHTML =
+        `
+        body {
+            background-color: ${colors.popup};
+            color: ${colors.popup_text};
+        }
+        
+        .button-class {
+            background-color: ${colors.button};
+            color: ${colors.popup_text};
+        }
+        
+        .button-class:hover {
+            background-color: ${colors.button_active} !important;
+            transition: 0.6s;
+        }
+        
+        #icon-selected {
+            background-color: ${colors.button_active} !important;
+            color: ${colors.popup_text};
+        }
+        `;
+})
+
+let groupToEdit;
+let activeGroup;
 const windowId = await getWindowId();
-const symbols = await (await fetch('../font/google-symbols.json')).json();
 
 const groupName = document.getElementById("group-name");
-const iconsList = document.getElementById("icons-list");
 const iconSelected = document.getElementById("icon-selected");
 const deleteButton = document.getElementById("delete");
 
-//load tempGroup on open page
-if (groupToEdit) {
-    document.getElementById('group-header').textContent = 'Edit Group';
-    groupName.value = groupToEdit.name;
-    iconSelected.textContent = groupToEdit.icon;
-    deleteButton.style.visibility = '';
-} else {
-    document.getElementById('group-header').textContent = 'New Group';
-    deleteButton.style.visibility = 'hidden';
+//load on open page
+await loadGroupToEdit();
+//reload when editing was clicked again and update active group if it was changed
+browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
+    if (message.command === notifyEditGroupReloadGroup) {
+        await loadGroupToEdit();
+
+        // Focus the current window
+        const window = await browser.windows.getCurrent();
+        if (window) {
+            browser.windows.update(window.id, { focused: true });
+        }
+    } else if (message.command === notifyBackgroundCurrentGroupUpdated) {
+        activeGroup = await getActiveGroup();
+    }
+});
+
+//set values of group to edit to the page
+async function loadGroupToEdit() {
+    activeGroup = await getActiveGroup();
+    groupToEdit = await getGroupToEdit();
+
+    if (groupToEdit) {
+        document.getElementById('group-header').textContent = 'Edit Group';
+        groupName.value = groupToEdit.name;
+        iconSelected.textContent = groupToEdit.icon;
+        deleteButton.style.visibility = '';
+    } else {
+        document.getElementById('group-header').textContent = 'New Group';
+        groupName.value = '';
+        iconSelected.textContent = '';
+        deleteButton.style.visibility = 'hidden';
+    }
 }
+
+
+const symbols = await (await fetch('../font/google-symbols.json')).json();
+const iconsList = document.getElementById("icons-list");
 
 //load symbols to selector
 symbols.symbols.forEach(symbol => {
@@ -100,45 +174,3 @@ deleteButton.onclick = async function () {
     }
 }
 
-//load style
-let style = document.getElementById("js-style")
-if (!style) {
-    style = document.createElement('style');
-    style.id = "js-style";
-    document.head.appendChild(style);
-}
-browser.theme.getCurrent().then(theme => {
-    let colors;
-    if (theme?.colors) {
-        colors = theme.colors;
-    } else {
-        colors = {};
-        colors.popup = "#fff";
-        colors.popup_text = "rgb(21,20,26)";
-        colors.button = "rgba(207,207,216,.33)";
-        colors.button_active = "rgb(207,207,216)";
-    }
-
-    style.innerHTML =
-        `
-        body {
-            background-color: ${colors.popup};
-            color: ${colors.popup_text};
-        }
-        
-        .button-class {
-            background-color: ${colors.button};
-            color: ${colors.popup_text};
-        }
-        
-        .button-class:hover {
-            background-color: ${colors.button_active} !important;
-            transition: 0.6s;
-        }
-        
-        #icon-selected {
-            background-color: ${colors.button_active} !important;
-            color: ${colors.popup_text};
-        }
-        `;
-})

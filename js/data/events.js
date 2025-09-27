@@ -14,6 +14,12 @@ export const notifyBackgroundCurrentGroupUpdated = "notifyBackgroundCurrentGroup
  * Sidebar requests
  */
 export const notifySidebarReloadGroups = "notifySidebarReloadGroups";
+export const notifySidebarEditGroupIsClosed = "notifySidebarEditGroupIsClosed";
+
+/**
+ * Edit group requests
+ */
+export const notifyEditGroupReloadGroup = "notifyEditGroupReloadGroup";
 
 export function notify(event, data) {
     console.log(`Sending to runtime. Event: ${event}. Data:`, data);

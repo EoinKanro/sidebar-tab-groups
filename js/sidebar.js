@@ -1,8 +1,15 @@
 import {getGroup, deleteGroupToEdit, getAllGroups, saveGroupToEdit, getActiveGroup} from "./data/dataStorage.js";
-import {notifySidebarReloadGroups} from "./data/events.js";
+import {
+    notify,
+    notifyEditGroupReloadGroup,
+    notifySidebarEditGroupIsClosed,
+    notifySidebarReloadGroups
+} from "./data/events.js";
 import {getLatestWindow, openTabs} from "./data/utils.js";
 
 const selectedName = "selected";
+let editIsOpen = false;
+
 await reloadGroups(false);
 
 //load theme of sidebar
@@ -23,14 +30,17 @@ browser.theme.onUpdated.addListener(({ theme }) => {
 
 //Open create group on click
 document.getElementById('create-group').addEventListener('click', async () => {
-    await deleteGroupToEdit()
-    await openGroupEditor();
+    await openGroupEditor(null);
 });
 
 //Reload groups buttons in sidebar on event
+//Set variable editIsOpen to false when the window is closed
 browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
     if (message.command === notifySidebarReloadGroups) {
-        await reloadGroups(message.data)
+        await reloadGroups(message.data);
+    } else if (message.command === notifySidebarEditGroupIsClosed) {
+        console.log("Edit group was closed");
+        editIsOpen = false;
     }
 });
 
@@ -97,8 +107,7 @@ async function createButton(group, selected) {
         event.preventDefault();
 
         const groupToEdit = await getGroup(group.id);
-        await saveGroupToEdit(groupToEdit);
-        await openGroupEditor();
+        await openGroupEditor(groupToEdit);
     });
 
     //add button
@@ -109,12 +118,25 @@ async function callOpenTabs(group) {
     await openTabs(group, true);
 }
 
-async function openGroupEditor() {
+async function openGroupEditor(group) {
+    if (!group) {
+        await deleteGroupToEdit()
+    } else {
+        await saveGroupToEdit(group);
+    }
+
+    //don't open page again, just reload content
+    if (editIsOpen) {
+        notify(notifyEditGroupReloadGroup, null);
+        return
+    }
+
     const activeWindow = await getLatestWindow();
     // console.log(activeWindow)
     const viewportWidth = Math.round(activeWindow.width * 0.6);
     const viewportHeight = Math.round(activeWindow.height * 0.5);
 
+    editIsOpen = true;
     browser.windows.create({
         url: browser.runtime.getURL("../html/editGroup.html"),
         type: "popup",
