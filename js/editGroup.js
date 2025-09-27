@@ -134,7 +134,6 @@ deleteButton.onclick = async function () {
             notify(new SidebarReloadGroupButtonsEvent());
         }
 
-        //todo close tabs
         await deleteGroupToEditId();
         window.close();
     }
