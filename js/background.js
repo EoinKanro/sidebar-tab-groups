@@ -164,9 +164,9 @@ async function processRestoreBackup(json) {
 //save tab to active group when opened
 browser.tabs.onCreated.addListener(async (tab) => {
     if (isAvailableToUpdate(tab.windowId)) {
-        console.log(`Saving new tab to current group: `, activeGroup)
+        console.log(`Saving new tab to current group: `, tab, activeGroup)
 
-        activeGroup.tabs.push(new Tab(tab.id, tab.url));
+        activeGroup.tabs.splice(tab.index, 0, new Tab(tab.id, tab.url))
         await save()
     }
 });
