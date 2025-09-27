@@ -110,6 +110,7 @@ async function processUpdateActiveGroup(group) {
     if (activeGroup) {
         activeGroup.name = group.name;
         activeGroup.icon = group.icon;
+        activeGroup.index = group.index;
         await save();
     } else {
         activeGroup = group;

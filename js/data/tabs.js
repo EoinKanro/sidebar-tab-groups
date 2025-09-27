@@ -3,6 +3,7 @@ export class TabsGroup {
     constructor(name, icon) {
         this.id = new Date().getTime();
         this.windowId = 0;
+        this.index = -1;
         this.name = name;
         this.icon = icon;
         this.tabs = [];
