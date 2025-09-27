@@ -19,6 +19,12 @@ hr {
     cursor: pointer;
 }
 
+.selected {
+    background-color: #a1a1a1;
+    box-shadow: inset 0px 2px 5px rgba(0, 0, 0, 0.2);
+    transform: translateY(2px);
+}
+
 .material-symbols-outlined {
     font-variation-settings: 'FILL' 0,
     'wght' 400,
@@ -26,27 +32,4 @@ hr {
     'opsz' 24
 }
 
-/* Styling for the custom context menu */
-#context-menu {
-    position: absolute;
-    display: none;
-    background-color: white;
-    border: 1px solid #ccc;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    z-index: 1000;
-}
 
-#context-menu ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-#context-menu ul li {
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-#context-menu ul li:hover {
-    background-color: #f0f0f0;
-}
