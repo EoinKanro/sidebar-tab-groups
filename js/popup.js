@@ -3,6 +3,7 @@ import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 
 //----------------------- Document elements ------------------------------
 
+const openSidebarButton = document.getElementById("open-sidebar-button");
 const settingsButton = document.getElementById("settings-button");
 const style = getStyle("js-style");
 
@@ -19,11 +20,17 @@ function loadTheme(theme) {
 //-------------------------- Event Listeners ------------------------------
 
 //update theme on change
-browser.theme.onUpdated.addListener(({ theme }) => {
+browser.theme.onUpdated.addListener(({theme}) => {
     loadTheme(theme);
 });
 
-settingsButton.addEventListener("click", async () => {
+//open sidebar
+openSidebarButton.onclick = function () {
+    browser.sidebarAction.open();
+    window.close();
+};
+
+settingsButton.onclick = async function () {
     const activeWindow = await getLatestWindow();
     const viewportWidth = Math.round(activeWindow.width * 0.6);
     const viewportHeight = Math.round(activeWindow.height * 0.5);
@@ -34,4 +41,4 @@ settingsButton.addEventListener("click", async () => {
         width: viewportWidth,
         height: viewportHeight
     })
-})
+};
