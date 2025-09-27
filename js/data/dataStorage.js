@@ -26,6 +26,7 @@ const enableBackupName = "enableBackup";
 const backupHoursName = "backupHours";
 const lastBackupTimeName = "lastBackupTime";
 const ifCloseTabsName = "ifCloseTabs";
+const sidebarButtonsPaddingName = "sidebarButtonsPadding";
 
 export async function getAllOpenedTabs() {
     return await browser.tabs.query({});
@@ -147,6 +148,15 @@ export async function saveIfCloseTabs(value) {
     await saveToLocalStorage(ifCloseTabsName, value);
 }
 
+
+
+export async function getSidebarButtonsPadding() {
+    return await getFromLocalStorage(sidebarButtonsPaddingName)
+}
+
+export async function saveSidebarButtonsPadding(value) {
+    await saveToLocalStorage(sidebarButtonsPaddingName, value);
+}
 
 
 

@@ -4,14 +4,17 @@ import {
     getAllGroups,
     saveGroupToEdit,
     getActiveGroup,
-    saveWindowId
+    saveWindowId, getSidebarButtonsPadding
 } from "./data/dataStorage.js";
+
 import {
     notify,
     notifyEditGroupReloadGroup,
     notifySidebarEditGroupIsClosed,
-    notifySidebarReloadGroups
+    notifySidebarReloadGroups,
+    notifySidebarUpdateButtonsPadding
 } from "./data/events.js";
+
 import {getLatestWindow, openTabs} from "./data/utils.js";
 
 const editGroupId = "edit-group-";
@@ -21,15 +24,29 @@ let editIsOpen = false;
 await reloadGroups(false);
 
 //load theme of sidebar
-let style = document.getElementById("js-style")
-if (!style) {
-    style = document.createElement('style');
-    style.id = "js-style";
-    document.head.appendChild(style);
+let styleTheme = document.getElementById("style-theme");
+if (!styleTheme) {
+    styleTheme = createStyle("style-theme");
 }
+
+let styleButtonsPadding = document.getElementById("style-buttons-padding");
+if (!styleButtonsPadding) {
+    styleButtonsPadding = createStyle("style-buttons-padding");
+}
+
+function createStyle(id) {
+    let style = document.createElement("style");
+    style.id = id;
+    document.head.appendChild(style);
+    return style;
+}
+
+await reloadButtonsPadding();
 browser.theme.getCurrent().then(theme => {
     loadTheme(theme);
 })
+
+
 
 //update sidebar on update theme
 browser.theme.onUpdated.addListener(({ theme }) => {
@@ -49,6 +66,8 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
     } else if (message.command === notifySidebarEditGroupIsClosed) {
         console.log("Edit group was closed");
         editIsOpen = false;
+    } else if (message.command === notifySidebarUpdateButtonsPadding) {
+        await reloadButtonsPadding();
     }
 });
 
@@ -169,6 +188,19 @@ async function openGroupEditor(group) {
     })
 }
 
+async function reloadButtonsPadding() {
+    const paddingPx = await getSidebarButtonsPadding();
+    if (paddingPx) {
+        styleButtonsPadding.innerHTML =
+            `
+            .button-class {
+                padding-top: ${paddingPx}px !important;
+                padding-bottom: ${paddingPx}px !important;
+            }
+            `
+    }
+}
+
 function loadTheme(theme) {
     let colors
     if (theme?.colors) {
@@ -181,7 +213,7 @@ function loadTheme(theme) {
         colors.toolbar_field_focus = "white"
     }
 
-    style.innerHTML =
+    styleTheme.innerHTML =
         `
         body {
             background-color: ${colors.toolbar_field};

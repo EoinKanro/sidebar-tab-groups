@@ -3,9 +3,14 @@ import {
     getBackupMinutes, getIfCloseTabs,
     getEnableBackup,
     saveBackupMinutes, saveIfCloseTabs,
-    saveEnableBackup, saveGroup
+    saveEnableBackup, saveGroup, getSidebarButtonsPadding, saveSidebarButtonsPadding
 } from "./data/dataStorage.js";
-import {notify, notifyBackgroundReloadAllGroups, notifyBackgroundUpdateBackup} from "./data/events.js";
+import {
+    notify,
+    notifyBackgroundReloadAllGroups,
+    notifyBackgroundUpdateBackup,
+    notifySidebarUpdateButtonsPadding
+} from "./data/events.js";
 import {backupGroups} from "./data/utils.js";
 
 //load style
@@ -46,6 +51,8 @@ browser.theme.getCurrent().then(theme => {
         `;
 })
 
+const sidebarButtonsPadding = document.getElementById('sidebar-buttons-padding');
+const saveAppearanceButton = document.getElementById('save-appearance-button');
 const backupCheckbox = document.getElementById('backup-checkbox');
 const backupTime = document.getElementById('backup-time');
 const saveBackupButton = document.getElementById('save-backup-button');
@@ -55,23 +62,44 @@ const closeTabsCheckbox = document.getElementById('close-tabs-checkbox');
 const saveTabsButton = document.getElementById('save-tabs-button');
 
 
+const sidebarButtonsPaddingPx = await getSidebarButtonsPadding();
 const isBackup = await getEnableBackup();
 const backupMinutes = await getBackupMinutes();
-const isCloseTabs = await getIfCloseTabs()
+const isCloseTabs = await getIfCloseTabs();
+
+//Set data from store
+if (sidebarButtonsPaddingPx) {
+    sidebarButtonsPadding.value = sidebarButtonsPaddingPx;
+}
 
 backupCheckbox.checked = isBackup;
 if (backupMinutes) {
     backupTime.value = backupMinutes;
 }
+
 closeTabsCheckbox.checked = isCloseTabs;
 
+
 //Restrict non digits
+sidebarButtonsPadding.addEventListener('input', (event) => {
+    event.target.value = replaceNonDigits(event.target.value);
+});
 backupTime.addEventListener('input', (event) => {
-    const value = event.target.value;
-    event.target.value = value.replace(/[^0-9]/g, '');
+    event.target.value = replaceNonDigits(event.target.value);
 });
 
-//Update on click
+function replaceNonDigits(value) {
+    return value.replace(/[^0-9]/g, '');
+}
+
+//Save appearance settings
+saveAppearanceButton.addEventListener('click', async (event) => {
+    await saveSidebarButtonsPadding(sidebarButtonsPadding.value);
+    notify(notifySidebarUpdateButtonsPadding, null);
+    alert("Appearance settings are updated")
+})
+
+//Save backup settings
 saveBackupButton.addEventListener('click', async (event) => {
     if (backupCheckbox.checked && (!backupTime.value || Number(backupTime.value) <= 0)) {
         alert("Wrong value of minutes for backup");
@@ -88,6 +116,7 @@ saveBackupButton.addEventListener('click', async (event) => {
     alert(alertText);
 })
 
+//Reload from backup
 restoreButton.addEventListener('click', async (event) => {
     const restoreTextData = restoreText.value;
     if (!restoreTextData) {
@@ -123,6 +152,7 @@ restoreButton.addEventListener('click', async (event) => {
     alert("Restoration is complete. If something is wrong you can find a backup right before the restoration in Downloads");
 })
 
+//Save tab settings
 saveTabsButton.addEventListener('click', async (event) => {
     await saveIfCloseTabs(closeTabsCheckbox.checked);
     alert("Tabs settings are updated");
