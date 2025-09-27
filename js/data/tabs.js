@@ -16,3 +16,9 @@ export class Tab {
         this.url = url;
     }
 }
+
+export const TABS_BEHAVIOR = Object.freeze({
+    SUSPEND: "suspend",
+    HIDE: "hide",
+    CLOSE: "close"
+});

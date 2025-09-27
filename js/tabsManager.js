@@ -36,7 +36,7 @@ await loadGroups();
 async function loadGroups() {
     draggedTabDiv = null;
     contextTabDiv = null;
-    groupsDiv.innerHTML = '';
+    groupsDiv.replaceChildren();
 
     const allGroups = await getAllGroups();
     const allTabs = await getAllOpenedTabs();

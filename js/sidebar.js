@@ -206,7 +206,7 @@ async function reloadGroupButtons() {
             return 0;
         });
 
-        tabButtons.innerHTML = '';
+        tabButtons.replaceChildren();
 
         allGroups.forEach((group) => {
             const selected = group.id === activeGroupId;

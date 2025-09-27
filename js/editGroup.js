@@ -178,7 +178,7 @@ function loadAvailableIconsList() {
         iconsToLoad = iconsToLoad.filter((icon) => icon.includes(iconSearch.value));
     }
 
-    iconsList.innerHTML = "";
+    iconsList.replaceChildren();
 
     iconsToLoad.forEach(symbol => {
         const button = document.createElement('button');

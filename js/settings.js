@@ -1,13 +1,13 @@
 
 import {
     getBackupMinutes,
-    getCloseTabsOnChangeGroup,
     getEnableBackup,
-    getSidebarButtonsPaddingPx, getStopTabsActivityOnChangeGroup,
+    getSidebarButtonsPaddingPx,
+    getTabsBehaviorOnChangeGroup,
     saveBackupMinutes,
-    saveCloseTabsOnChangeGroup,
     saveEnableBackup,
-    saveSidebarButtonsPaddingPx, saveStopTabsActivityOnChangeGroup
+    saveSidebarButtonsPaddingPx,
+    saveTabsBehaviorOnChangeGroup
 } from "./data/localStorage.js";
 import {
     BackgroundReinitBackupEvent,
@@ -17,6 +17,7 @@ import {
 } from "./service/events.js";
 import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 import {backupGroups} from "./service/utils.js";
+import {TABS_BEHAVIOR} from "./data/tabs.js";
 
 //----------------------- Document elements ------------------------------
 
@@ -29,8 +30,7 @@ const backupNowButton = document.getElementById('backup-now-button');
 const saveBackupButton = document.getElementById('save-backup-button');
 const restoreText = document.getElementById('restore-text');
 const restoreButton = document.getElementById('restore-button');
-const closeTabsCheckbox = document.getElementById('close-tabs-checkbox');
-const stopTabsActivityCheckbox = document.getElementById('stop-tabs-activity-checkbox');
+const tabsBehaviorSelect = document.getElementById('tabs-behavior');
 const saveTabsButton = document.getElementById('save-tabs-button');
 
 //---------------------------- Init ----------------------------------------
@@ -41,8 +41,7 @@ async function init() {
     const sidebarButtonsPaddingPx = await getSidebarButtonsPaddingPx();
     const isBackup = await getEnableBackup();
     const backupMinutes = await getBackupMinutes();
-    const isCloseTabs = await getCloseTabsOnChangeGroup();
-    const isStopTabsActivity = await getStopTabsActivityOnChangeGroup();
+    const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
 
     //Set data from store
     if (sidebarButtonsPaddingPx) {
@@ -54,8 +53,20 @@ async function init() {
         backupTime.value = backupMinutes;
     }
 
-    closeTabsCheckbox.checked = isCloseTabs;
-    stopTabsActivityCheckbox.checked = isStopTabsActivity;
+    tabsBehaviorSelect.replaceChildren();
+    Object.values(TABS_BEHAVIOR).forEach(option => {
+        const opt = document.createElement('option');
+        opt.textContent = option;
+        tabsBehaviorSelect.appendChild(opt);
+    });
+
+    console.log(tabsBehaviorOnChangeGroup)
+    let selectedTabsBehaviorValue = Object.values(TABS_BEHAVIOR).find(valueF => valueF === tabsBehaviorOnChangeGroup);
+    console.log(selectedTabsBehaviorValue);
+    if (selectedTabsBehaviorValue === undefined || !selectedTabsBehaviorValue) {
+        selectedTabsBehaviorValue = TABS_BEHAVIOR.SUSPEND;
+    }
+    tabsBehaviorSelect.value = selectedTabsBehaviorValue;
 }
 
 function loadThemeFromBrowser() {
@@ -156,8 +167,7 @@ saveAppearanceButton.onclick = async function () {
 
 //Save tab settings
 saveTabsButton.onclick = async function () {
-    await saveCloseTabsOnChangeGroup(closeTabsCheckbox.checked);
-    await saveStopTabsActivityOnChangeGroup(stopTabsActivityCheckbox.checked);
+    await saveTabsBehaviorOnChangeGroup(tabsBehaviorSelect.value);
     alert("Tabs settings are updated");
 };
 

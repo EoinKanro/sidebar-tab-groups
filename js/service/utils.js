@@ -2,12 +2,12 @@
 // Open the tabs of selected group
 import {
     getActiveWindowId, getBackupMinutes,
-    getCloseTabsOnChangeGroup, getEnableBackup, getSidebarButtonsPaddingPx,
-    getStopTabsActivityOnChangeGroup,
+    getEnableBackup, getSidebarButtonsPaddingPx,
+    getTabsBehaviorOnChangeGroup,
     saveLastBackupTime
 } from "../data/localStorage.js";
 import {getAllGroups, getGroup} from "../data/databaseStorage.js";
-import {Tab} from "../data/tabs.js";
+import {Tab, TABS_BEHAVIOR} from "../data/tabs.js";
 
 //------------------- Browser utils -------------------
 
@@ -59,11 +59,11 @@ export async function openTabs(groupId) {
     }
 
     //close or hide old tabs
-    const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
+    const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
     const openedIds = openedTabs.map(tab => tab.id);
     const tabsToClose = allTabs.filter(tab => !openedIds.includes(tab.id));
 
-    if (closeTabsOnChangeGroup) {
+    if (tabsBehaviorOnChangeGroup === TABS_BEHAVIOR.CLOSE) {
         await closeTabs(tabsToClose);
     } else {
         await hideTabs(tabsToClose, openedIds, openedTabs, windowId);
@@ -131,7 +131,7 @@ async function openTab(url, windowId) {
 }
 
 async function hideTabs(tabsToClose, openedIds, openedTabs, windowId) {
-    const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
+    const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
 
     //show openedTabs
     await browser.tabs.show(openedIds);
@@ -150,7 +150,8 @@ async function hideTabs(tabsToClose, openedIds, openedTabs, windowId) {
                 continue
             }
 
-            if (stopTabsActivityOnChangeGroup) {
+            //suspend
+            if (tabsBehaviorOnChangeGroup !== TABS_BEHAVIOR.HIDE) {
                 await browser.tabs.discard(tab.id);
             }
             await browser.tabs.hide(tab.id);
@@ -177,16 +178,14 @@ export async function backupGroups() {
     const enableBackup = await getEnableBackup();
     const backupMinutes = await getBackupMinutes();
     const sidebarButtonsPaddingPx = await getSidebarButtonsPaddingPx();
-    const closeTabsOnChangeGroup = await getCloseTabsOnChangeGroup();
-    const stopTabsActivityOnChangeGroup = await getStopTabsActivityOnChangeGroup();
+    const tabsBehaviorOnChangeGroup = await getTabsBehaviorOnChangeGroup();
 
     const result = {
         allGroups: allGroups,
         enableBackup: enableBackup,
         backupMinutes: backupMinutes,
         sidebarButtonsPaddingPx: sidebarButtonsPaddingPx,
-        closeTabsOnChangeGroup: closeTabsOnChangeGroup,
-        stopTabsActivityOnChangeGroup: stopTabsActivityOnChangeGroup
+        tabsBehaviorOnChangeGroup: tabsBehaviorOnChangeGroup
     }
 
     const blob = new Blob([JSON.stringify(result)], {type: 'text/plain'});
