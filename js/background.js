@@ -184,70 +184,157 @@ async function processRestoreBackup(json) {
 
 //----------------------- Tabs CUD listeners ------------------------
 
+class BlockingQueue {
+    constructor() {
+        this.queue = [];
+        this.resolvers = [];
+    }
+
+    take() {
+        if (this.queue.length > 0) {
+            return Promise.resolve(this.queue.shift());
+        } else {
+            //Save resolve and wait for message
+            return new Promise((resolve) => {
+                this.resolvers.push(resolve);
+            });
+        }
+    }
+
+    add(msg) {
+        console.log("Adding msg to queue...", msg);
+
+        if (this.resolvers.length > 0) {
+            //Get resolve and send message
+            const resolve = this.resolvers.shift();
+            resolve(msg);
+        } else {
+            this.queue.push(msg);
+        }
+    }
+}
+
+class CreateTabAction {
+    constructor(index, id, url) {
+        this.index = index;
+        this.id = id;
+        this.url = url;
+    }
+}
+
+class UpdateTabAction {
+    constructor(id, url) {
+        this.id = id;
+        this.url = url;
+    }
+}
+
+class MoveTabAction {
+    constructor(id, toIndex) {
+        this.id = id;
+        this.toIndex = toIndex;
+    }
+}
+
+class RemoveTabAction {
+    constructor(id) {
+        this.id = id;
+    }
+}
+
+async function processTabsActions() {
+    while(true) {
+        try {
+            const msg = await tabsActionQueue.take();
+
+            if (msg instanceof CreateTabAction) {
+                await createTab(msg);
+            } else if (msg instanceof UpdateTabAction) {
+                await updateTab(msg);
+            } else if (msg instanceof MoveTabAction) {
+                await moveTab(msg);
+            } else if (msg instanceof RemoveTabAction) {
+                await removeTab(msg);
+            } else {
+                console.warn("Can't process message", msg);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+}
+
+async function createTab(msg) {
+    console.log(`Saving new tab to current group: `, msg, activeGroup);
+    activeGroup.tabs.splice(msg.index, 0, new Tab(msg.id, msg.url));
+    await save();
+}
+
+async function updateTab(msg) {
+    const tabToChange = activeGroup.tabs.find(tabF => tabF.id === msg.id);
+    if (tabToChange === undefined || !tabToChange || tabToChange.url === msg.url) {
+        return
+    }
+
+    console.log(`Updating tab info in current group: `, msg, activeGroup);
+    tabToChange.url = msg.url;
+    await save();
+}
+
+async function moveTab(msg) {
+    if (activeGroup.tabs.length < msg.toIndex) {
+        return;
+    }
+
+    const tab = activeGroup.tabs.find(tabF => tabF.id === msg.id);
+
+    if (tab === undefined || !tab) {
+        return;
+    }
+
+    const fromIndex = activeGroup.tabs.indexOf(tab);
+    const toIndex = msg.toIndex;
+
+    console.log("Moving tab in current group: ", msg, activeGroup);
+    activeGroup.tabs.splice(fromIndex, 1);
+    activeGroup.tabs.splice(toIndex, 0, tab);
+    await save();
+}
+
+async function removeTab(msg) {
+    console.log(`Removing tab from current group: `, msg, activeGroup)
+    activeGroup.tabs = activeGroup.tabs.filter((tab) => tab.id !== msg.id);
+    await save();
+}
+
+const tabsActionQueue = new BlockingQueue();
+processTabsActions().then(() => console.log("Background tab processing stopped"));
+
 //save tab to active group when opened
 browser.tabs.onCreated.addListener(async (tab) => {
-    try {
-        if (isAvailableToUpdate(tab.windowId)) {
-            console.log(`Saving new tab to current group: `, tab, activeGroup)
-
-            activeGroup.tabs.splice(tab.index, 0, new Tab(tab.id, tab.url))
-            await save()
-        }
-    } catch (e) {
-        console.error(e);
+    if (isAvailableToUpdate(tab.windowId)) {
+        tabsActionQueue.add(new CreateTabAction(tab.index, tab.id, tab.url));
     }
 });
 
 //save tab if it was updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    try {
-        if (isAvailableToUpdate(tab.windowId) && !isUrlEmpty(changeInfo.url)) {
-            const tabToChange = activeGroup.tabs.filter(tabF => tabF.id === tab.id)[0];
-            if (!tabToChange || tabToChange.url === changeInfo.url) {
-                return
-            }
-
-            console.log(`Updating tab info in current group: `, changeInfo, activeGroup);
-            tabToChange.url = changeInfo.url;
-
-            await save()
-        }
-    } catch (e) {
-        console.error(e);
+    if (isAvailableToUpdate(tab.windowId) && !isUrlEmpty(changeInfo.url)) {
+        tabsActionQueue.add(new UpdateTabAction(tab.id, changeInfo.url));
     }
 });
 
 //save moved tab
 browser.tabs.onMoved.addListener(async (tabId, changeInfo) => {
-    try {
-        if (isAvailableToUpdate(changeInfo.windowId) && activeGroup.tabs.filter(tabF => tabF.id === tabId).length > 0) {
-            const fromIndex = changeInfo.fromIndex;
-            const toIndex = changeInfo.toIndex;
-
-            const tabs = activeGroup.tabs;
-            const tab = tabs.splice(fromIndex, 1)[0];
-
-            tabs.splice(toIndex, 0, tab);
-
-            activeGroup.tabs = tabs;
-            await save();
-        }
-    } catch (e) {
-        console.error(e);
+    if (isAvailableToUpdate(changeInfo.windowId) && activeGroup.tabs.find(tabF => tabF.id === tabId) !== undefined) {
+        tabsActionQueue.add(new MoveTabAction(tabId, changeInfo.toIndex));
     }
 })
 
 //remove tab from active group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-    try {
-        if (!removeInfo.isWindowClosing && isAvailableToUpdate(removeInfo.windowId)) {
-            console.log(`Deleting tab from current group: `, tabId, activeGroup)
-
-            activeGroup.tabs = activeGroup.tabs.filter((tab) => tab.id !== tabId);
-            await save()
-        }
-    } catch (e) {
-        console.error(e);
+    if (isAvailableToUpdate(removeInfo.windowId) && !removeInfo.isWindowClosing) {
+        tabsActionQueue.add(new RemoveTabAction(tabId));
     }
 });
 
