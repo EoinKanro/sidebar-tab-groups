@@ -34,10 +34,10 @@ if (groupToEdit) {
 //load symbols to selector
 symbols.symbols.forEach(symbol => {
     const button = document.createElement('button');
-    // button.classList.add('button-class');
 
     const span = document.createElement('span');
     span.classList.add('material-symbols-outlined');
+    span.classList.add('icon-span');
     span.textContent = symbol;
 
     button.appendChild(span);
