@@ -7,7 +7,7 @@ import {
     saveActiveGroup, saveWindowId
 } from "./data/dataStorage.js";
 
-import {notifyBackgroundCurrentGroupUpdated} from "./data/events.js"
+import {notify, notifyBackgroundCurrentGroupUpdated, notifySidebarReloadGroups} from "./data/events.js"
 import {getLatestWindow, openTabs} from "./data/utils.js";
 
 let activeGroup;
@@ -29,6 +29,7 @@ async function init() {
         activeGroup.windowId = windowId;
         await saveActiveGroup(activeGroup, false);
         await openTabs(activeGroup, false);
+        notify(notifySidebarReloadGroups, false);
         console.log("Initialized current group", activeGroup);
     }
 }
