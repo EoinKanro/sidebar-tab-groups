@@ -4,12 +4,13 @@ import {
     deleteActiveGroup,
     deleteGroupToEdit,
     getAllGroups,
-    saveActiveGroup, saveWindowId, getEnableBackup, getBackupMinutes, getLastBackupTime
+    saveWindowId, getEnableBackup, getBackupMinutes, getLastBackupTime, getWindowId, getActiveGroup
 } from "./data/dataStorage.js";
 
 import {
     notify,
     notifyBackgroundCurrentGroupUpdated,
+    notifyBackgroundReloadAllGroups,
     notifyBackgroundUpdateBackup,
     notifySidebarReloadGroups
 } from "./data/events.js"
@@ -17,6 +18,7 @@ import {backupGroups, getLatestWindow, openTabs} from "./data/utils.js";
 
 let activeGroup;
 let backupInterval = null;
+
 
 //clear temp data and open tabs of first group
 await init();
@@ -27,19 +29,23 @@ async function init() {
     const windowId = (await getLatestWindow()).id
     await saveWindowId(windowId);
 
+    await reloadAllGroups();
+    await initBackupInterval();
+}
+
+async function reloadAllGroups() {
     const allGroups = await getAllGroups();
     //open first group on load addon
     if (allGroups && allGroups.length > 0) {
-        activeGroup = allGroups[0];
+        const active = allGroups[0];
 
-        activeGroup.windowId = windowId;
-        await saveActiveGroup(activeGroup, false);
-        await openTabs(activeGroup, false);
+        active.windowId = await getWindowId();
+        await openTabs(active, false);
         notify(notifySidebarReloadGroups, false);
+
+        activeGroup = await getActiveGroup();
         console.log("Initialized current group", activeGroup);
     }
-
-    await initBackupInterval();
 }
 
 browser.runtime.onInstalled.addListener(() => {
@@ -52,9 +58,11 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
         activeGroup = message.data;
         console.log("Current group received:", activeGroup);
 
-    }
-    if (message.command === notifyBackgroundUpdateBackup) {
+    } else if (message.command === notifyBackgroundUpdateBackup) {
         await initBackupInterval();
+
+    } else if (message.command === notifyBackgroundReloadAllGroups) {
+        await reloadAllGroups();
     }
 });
 

@@ -10,6 +10,7 @@ export class EventMessage {
  */
 export const notifyBackgroundCurrentGroupUpdated = "notifyBackgroundCurrentGroupUpdated";
 export const notifyBackgroundUpdateBackup = "notifyBackgroundUpdateBackup";
+export const notifyBackgroundReloadAllGroups = "notifyBackgroundReloadAllGroups";
 
 /**
  * Sidebar requests
