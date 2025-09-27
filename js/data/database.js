@@ -2,7 +2,9 @@ import {
     getFromDatabase,
     getAllFromDatabase,
     saveInDatabase,
-    deleteFromDatabase
+    deleteFromDatabase,
+    notify,
+    databaseAnswer
 } from "./events.js"
 
 //TODO REMOVE
@@ -14,28 +16,39 @@ export class Request {
         this.data = data;
     }
 }
+
+export class Response {
+    constructor(id, data) {
+        this.id = id;
+        this.data = data;
+    }
+}
+
 export const tabGroupsName = "tab-groups";
 
 let db;
 
 export async function initDatabase() {
     //Initialize database requests handlers for outside contexts
-     await browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-        console.log("Got message from runtime:", message);
+    browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
         let result;
 
+        //message - EventMessage from events.js. message.data - Request
         if (message.command === getFromDatabase) {
-            result = await getData(message.data);
+            result = getData(message.data);
         } else if (message.command === getAllFromDatabase) {
-            result = await getAllData(message.data);
+            result = getAllData(message.data);
         } else if (message.command === saveInDatabase) {
-            result = await saveData(message.data)
+            result = saveData(message.data)
         } else if (message.command === deleteFromDatabase) {
-            result = await deleteData(message.data);
+            result = deleteData(message.data);
         }
 
         if (result) {
-            sendResponse({result})
+            const answer = await result;
+            if (message.command.startsWith("get")) {
+                notify(databaseAnswer, new Response(message.data.data, answer));
+            }
         }
     });
 

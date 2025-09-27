@@ -4,8 +4,8 @@ import {
     saveInDatabase,
     deleteFromDatabase,
     notifyBackgroundCurrentGroupUpdated,
-    notify,
-    EventMessage
+    databaseAnswer,
+    notify
 } from "./events.js"
 
 import {tabGroupsName, Request, getData, getAllData, saveData, deleteData} from "./database.js"
@@ -62,7 +62,7 @@ export async function deleteGroup(groupId, currentContext) {
  * @returns {Promise<unknown>} array/null
  */
 export async function getAllGroups(currentContext) {
-    return await sendRequestToDatabase(getAllFromDatabase, tabGroupsName, null, currentContext);
+    return await sendRequestToDatabase(getAllFromDatabase, tabGroupsName, new Date().getTime(), currentContext);
 }
 
 
@@ -149,13 +149,23 @@ function sendRequestToDatabaseCurrentContext(event, storeName, data) {
 }
 
 function sendRequestToDatabaseSeparateContext(event, storeName, data) {
-    return new Promise((resolve, reject) => {
-        browser.runtime.sendMessage(new EventMessage(event, new Request(storeName, data)))
-            .then(response => {
-                resolve(response);
-            })
-            .catch(error => {
-                resolve(null);
-            });
+    return new Promise(async (resolve, reject) => {
+        const message = new Request(storeName, data);
+
+        if (event.startsWith("get")) {
+            const tempListener = (message, sender, sendResponse) => {
+                //message - EventMessage from events.js. message.data - Response from database.js
+                if (message.command === databaseAnswer && message.data.id === data) {
+                    browser.runtime.onMessage.removeListener(tempListener);
+                    resolve(message.data.data);
+                }
+            }
+
+            await browser.runtime.onMessage.addListener(tempListener);
+            notify(event, message);
+        } else {
+            notify(event, message);
+            resolve(null);
+        }
     })
 }
