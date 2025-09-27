@@ -1,0 +1,27 @@
+body {
+    text-align: center;
+    box-sizing: content-box;
+}
+
+hr {
+    width: 100%;
+}
+
+#tab-buttons {
+    width: 100%; /* Full width of the parent */
+    margin: 0 auto; /* Center the container */
+}
+
+.button-class {
+    width: 100%;
+    border: none;
+    text-align: center;
+    cursor: pointer;
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24
+}
