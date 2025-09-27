@@ -6,18 +6,12 @@
   "permissions": ["tabs", "storage"],
   "sidebar_action": {
     "default_panel": "sidebar.html",
-    "default_icon": {
-      "19": "icons/icon-19.png",
-      "38": "icons/icon-38.png"
-    },
     "default_title": "Tab Manager"
   },
   "background": {
     "scripts": ["js/background.js"],
-    "persistent": false
-  },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "type": "module",
+    "persistent": true
   },
   "web_accessible_resources": [
     "js/tabsGroup.js"

@@ -1,3 +1,4 @@
+//todo windowId?
 export class TabsGroup {
     constructor(id, name, icon, tabs) {
         this.id = id;
@@ -6,6 +7,15 @@ export class TabsGroup {
         this.tabs = tabs;
     }
 }
+
+export class Tab {
+    constructor(id, url) {
+        this.id = id;
+        this.url = url;
+    }
+}
+
+export const currentGroupName = "currentGroup";
 
 export function getGroupName(group) {
     return `group-${group.id}`
@@ -28,10 +38,10 @@ export async function getAllTabs() {
 }
 
 export async function saveCurrentGroup(group) {
-    await browser.storage.local.set( {["currentGroup"] : group} )
+    await browser.storage.local.set( {[currentGroupName] : group} )
     console.log(`Set current group: ${JSON.stringify(group, null, 0)}`);
 }
 
 export async function getCurrentGroup() {
-    return await getGroup("currentGroup");
+    return await getGroup(currentGroupName);
 }
