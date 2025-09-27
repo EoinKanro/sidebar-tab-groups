@@ -11,7 +11,7 @@
   "background": {
     "scripts": ["js/background.js"],
     "type": "module",
-    "persistent": false
+    "persistent": true
   },
   "web_accessible_resources": [
     "js/tabsGroup.js",

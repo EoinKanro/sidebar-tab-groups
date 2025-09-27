@@ -7,9 +7,6 @@ import {
     databaseAnswer
 } from "./events.js"
 
-//TODO REMOVE
-indexedDB.deleteDatabase("SidebarTabGroups")
-
 export class Request {
     constructor(storeName, data, id = "") {
         this.storeName = storeName;
