@@ -24,7 +24,6 @@ export async function deleteActiveGroupId() {
 }
 
 //------------------- Window id ----------------
-
 export async function saveActiveWindowId(windowId) {
     await saveToLocalStorage(activeWindowIdName, windowId);
 }
@@ -38,7 +37,6 @@ export async function deleteActiveWindowId() {
 }
 
 //---------------- Group to edit id -------------------
-
 export async function saveGroupToEditId(groupId) {
     await saveToLocalStorage(groupToEditIdName, groupId);
 }
@@ -103,6 +101,7 @@ export async function saveStopTabsActivityOnChangeGroup(bool) {
     await saveToLocalStorage(stopTabsActivityOnChangeGroupName, bool);
 }
 
+//----------------------- Utils ----------------------------
 async function getFromLocalStorage(key) {
     console.log(`Getting ${key} from local storage...`);
     return (await browser.storage.local.get(key))[key];

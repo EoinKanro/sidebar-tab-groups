@@ -7,15 +7,25 @@ import {
     notifyBackgroundOpenFirstGroupTabs,
     notifyBackgroundReinitBackup,
     notifyBackgroundOpenTabs,
-    SidebarUpdateActiveGroupButtonEvent, notifyBackgroundRestoreBackup, SidebarReloadGroupButtonsEvent
+    SidebarUpdateActiveGroupButtonEvent,
+    notifyBackgroundRestoreBackup,
+    SidebarReloadGroupButtonsEvent,
+    SidebarUpdateButtonsPadding
 } from "./service/events.js";
 import {
-    deleteActiveGroupId, deleteActiveWindowId, deleteGroupToEditId,
+    deleteActiveGroupId,
+    deleteActiveWindowId,
+    deleteGroupToEditId,
     getBackupMinutes,
     getEnableBackup,
     getLastBackupTime,
     saveActiveGroupId,
-    saveActiveWindowId, saveBackupMinutes, saveEnableBackup
+    saveActiveWindowId,
+    saveBackupMinutes,
+    saveCloseTabsOnChangeGroup,
+    saveEnableBackup,
+    saveSidebarButtonsPaddingPx,
+    saveStopTabsActivityOnChangeGroup
 } from "./data/localStorage.js";
 import {Tab} from "./data/tabs.js";
 import {deleteAllGroups, getAllGroups, saveGroup} from "./data/databaseStorage.js";
@@ -172,14 +182,33 @@ async function backupGroupsWithCheck() {
 async function processRestoreBackup(json) {
     await backupGroups();
 
-    await deleteAllGroups()
+    await deleteAllGroups();
     await cleanTempData();
 
-    for (const item of json) {
+    for (const item of json.allGroups) {
         await saveGroup(item);
     }
 
     await openFirstGroup();
+
+    try {
+        await saveSetting(json.enableBackup, async () => await saveEnableBackup(json.enableBackup));
+        await saveSetting(json.backupMinutes, async () => await saveBackupMinutes(Number(json.backupMinutes)));
+        await saveSetting(json.sidebarButtonsPaddingPx, async () => await saveSidebarButtonsPaddingPx(Number(json.sidebarButtonsPaddingPx)));
+        await saveSetting(json.closeTabsOnChangeGroup, async () => await saveCloseTabsOnChangeGroup(json.closeTabsOnChangeGroup));
+        await saveSetting(json.stopTabsActivityOnChangeGroup, async () => await saveStopTabsActivityOnChangeGroup(json.stopTabsActivityOnChangeGroup));
+
+        await cleanInitBackupInterval();
+        notify(new SidebarUpdateButtonsPadding());
+    } catch (e) {
+        console.warn("Can't restore settings", json);
+    }
+}
+
+async function saveSetting(param, saveFunction) {
+    if (param !== undefined && param !== null) {
+        await saveFunction();
+    }
 }
 
 //----------------------- Tabs CUD listeners ------------------------
