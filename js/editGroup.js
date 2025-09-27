@@ -3,7 +3,7 @@ import {
     getGroupToEdit,
     saveGroup,
     deleteGroup,
-    deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab, saveActiveGroup
+    deleteGroupToEdit, getActiveGroup, getAllOpenedTabs, Tab, saveActiveGroup, getWindowId
 } from "./data/dataStorage.js";
 
 import {
@@ -12,6 +12,7 @@ import {
 } from "./data/events.js";
 
 const groupToEdit = await getGroupToEdit();
+const windowId = await getWindowId();
 const symbols = await (await fetch('../font/google-symbols.json')).json();
 
 const groupName = document.getElementById("group-name");
@@ -49,12 +50,15 @@ symbols.symbols.forEach(symbol => {
 //save group
 document.getElementById('submit').onclick = async function () {
     const group = new TabsGroup(groupName.value, iconSelected.textContent);
+    group.windowId = windowId;
 
     //save current tabs to new group if there is no currentGroup
     const activeGroup = await getActiveGroup();
     if (!activeGroup) {
         const allTabs = await getAllOpenedTabs();
-        group.tabs = allTabs.map(tab => new Tab(tab.id, tab.url));
+        group.tabs = allTabs
+            .filter(tab => tab.windowId === windowId)
+            .map(tab => new Tab(tab.id, tab.url));
     }
 
     //set id if it's an update
@@ -65,7 +69,7 @@ document.getElementById('submit').onclick = async function () {
     await saveGroup(group, false);
     await deleteGroupToEdit();
 
-    //notify background if we changed active group
+    //notify background if there is no active group or we've updated active group
     if (!activeGroup || activeGroup.id === group.id) {
         await saveActiveGroup(group, true);
     }

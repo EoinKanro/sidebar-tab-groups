@@ -14,6 +14,7 @@ import {tabGroupsName, Request, getData, getAllData, saveData, deleteData} from 
 export class TabsGroup {
     constructor(name, icon) {
         this.id = new Date().getTime();
+        this.windowId = 0;
         this.name = name;
         this.icon = icon;
         this.tabs = [];
@@ -29,6 +30,7 @@ export class Tab {
 
 const activeGroupName = "activeGroup";
 const editGroupName = "editGroup";
+const windowIdName = "windowId";
 
 export async function getAllOpenedTabs() {
     return await browser.tabs.query({});
@@ -85,6 +87,7 @@ export async function deleteActiveGroup(isNotify) {
 }
 
 
+
 export async function saveGroupToEdit(group) {
     await saveToLocalStorage(editGroupName, group)
 }
@@ -95,6 +98,16 @@ export async function getGroupToEdit() {
 
 export async function deleteGroupToEdit() {
     await saveToLocalStorage(editGroupName, null);
+}
+
+
+
+export async function saveWindowId(id) {
+    await saveToLocalStorage(windowIdName, id);
+}
+
+export async function getWindowId() {
+    return getFromLocalStorage(windowIdName);
 }
 
 

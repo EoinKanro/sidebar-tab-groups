@@ -86,12 +86,12 @@ export function getAllData(request) {
                 result.push(cursor.value);
                 cursor.continue();
             } else {
-                console.log(`Got all successfully: ${toJson(result)}`)
+                console.log(`Got all successfully: `, result)
                 resolve(result);
             }
         };
         requestDb.onerror = function (event) {
-            console.log(`Got all with error: }`, event)
+            console.log(`Got all with error: `, event)
             resolve(null);
         };
     });
@@ -101,7 +101,7 @@ export function getAllData(request) {
  * @returns {Promise<unknown>} obj/null
  */
 export function getData(request) {
-    console.log(`Getting ${request.data} from ${request.storeName}`)
+    console.log(`Getting data ${request.data} from ${request.storeName}`)
 
     return new Promise(async (resolve, reject) => {
         const transaction = db.transaction([request.storeName], "readonly");
@@ -109,11 +109,11 @@ export function getData(request) {
 
         const requestDb = store.get(request.data);
         requestDb.onsuccess = function (event) {
-            console.log(`Got ${toJson(request.data)} successfully: ${toJson(event.target.result)}`);
+            console.log(`Got successfully: `, request.data, event.target.result);
             resolve(event.target.result || null);
         };
         requestDb.onerror = function (event) {
-            console.log(`Got ${toJson(request.data)} with error: `, event);
+            console.log(`Got with error. `, request.data, event);
             resolve(null);
         };
     });
@@ -123,7 +123,7 @@ export function getData(request) {
  * @returns {Promise<unknown>} true/false
  */
 export function saveData(request) {
-    console.log(`Saving ${JSON.stringify(request.data, null, 0)} in ${request.storeName}`)
+    console.log(`Saving data in ${request.storeName}`, request.data)
 
     return new Promise(async (resolve) => {
         const transaction = db.transaction([request.storeName], "readwrite");
@@ -131,11 +131,11 @@ export function saveData(request) {
 
         const requestDb = store.put(request.data);
         requestDb.onsuccess = function (event) {
-            console.log(`Saved ${toJson(request.data)} successfully`);
+            console.log(`Saved successfully: `, request.data);
             resolve(true);
         };
         requestDb.onerror = function (event) {
-            console.log(`Saved ${toJson(request.data)} with error: `, event);
+            console.log(`Saved with error. `, request.data, event);
             resolve(false);
         };
     });
@@ -153,16 +153,13 @@ export function deleteData(request) {
 
         const requestDb = store.delete(request.data);
         requestDb.onsuccess = function (event) {
-            console.log(`Deleted ${toJson(request.data)} successfully`);
+            console.log(`Deleted successfully: `, request.data);
             resolve(true);
         };
         requestDb.onerror = function (event) {
-            console.log(`Got ${toJson(request.data)} with error: `, event);
+            console.log(`Got data with error.`, request.data, event);
             resolve(false);
         };
     });
 }
 
-function toJson(obj) {
-    return JSON.stringify(obj, null, 0)
-}
