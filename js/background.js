@@ -1,7 +1,40 @@
-import {Tab, saveGroup} from "./data/dataStorage.js";
+import {
+    Tab,
+    saveGroup,
+    deleteActiveGroup,
+    deleteGroupToEdit,
+    getAllGroups,
+    saveActiveGroup, saveWindowId
+} from "./data/dataStorage.js";
 import {notifyBackgroundCurrentGroupUpdated} from "./data/events.js"
 
+import {initDatabase} from "./data/database.js";
+import {getLatestWindow, openTabs} from "./data/utils.js";
+
 let activeGroup;
+
+//init database and open tabs of first group if exists
+await init();
+async function init() {
+    await initDatabase();
+
+    //clear temp data
+    await deleteActiveGroup(false);
+    await deleteGroupToEdit();
+    const windowId = (await getLatestWindow()).id
+    await saveWindowId(windowId);
+
+    const allGroups = await getAllGroups(true);
+    //open first group on load addon
+    if (allGroups && allGroups.length > 0) {
+        activeGroup = allGroups[0];
+
+        activeGroup.windowId = windowId;
+        await saveActiveGroup(activeGroup, false);
+        await openTabs(activeGroup, false, true);
+        console.log("Initialized current group", activeGroup);
+    }
+}
 
 browser.runtime.onInstalled.addListener(() => {
     console.log("Tab Manager Extension Installed");
@@ -56,5 +89,5 @@ function isAvailableToUpdate(windowId) {
 }
 
 async function save() {
-    await saveGroup(activeGroup, false)
+    await saveGroup(activeGroup, true)
 }
