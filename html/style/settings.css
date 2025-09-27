@@ -5,11 +5,14 @@
 }
 
 .button-class {
+    position: relative;
     border: none;
     text-align: center;
     cursor: pointer;
+    transition: background-color 0.6s ease;
+    --hover-bg: rgba(0, 0, 0, 0.1);
 }
 
 .button-class:hover {
-    transition: 0.6s;
+    background-color: var(--hover-bg);
 }
