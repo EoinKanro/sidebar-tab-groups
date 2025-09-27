@@ -1,16 +1,37 @@
-import {TabsGroup, Tab, saveGroup, getGroupName, getAllTabs, saveCurrentGroup, getGroup, getCurrentGroup} from "./tabsGroup.js";
+import {
+    TabsGroup,
+    Tab,
+    saveGroup,
+    getGroupName,
+    getAllTabs,
+    saveCurrentGroup,
+    getGroup,
+    getCurrentGroup,
+    groupToUpdateName, saveGroupToUpdate
+} from "./tabsGroup.js";
 
 await saveCurrentGroup(null);
 
 // Event listener for creating a new group
 document.getElementById('create-group').addEventListener('click', () => {
-    // browser.tabs.create({
-    //     url: browser.runtime.getURL("editGroup.html")
-    // })
-    clickCreateNewGroup();
+    browser.windows.create({
+        url: browser.runtime.getURL("editGroup.html"),
+        type: "popup"
+    })
 });
 
-async function clickCreateNewGroup() {
+//save groupToUpdateName
+browser.storage.local.onChanged.addListener((changes, areaName) => {
+    if (changes[groupToUpdateName]) {
+        const group = changes[groupToUpdateName];
+        if (group) {
+            saveGroupToUpdate(null);
+            clickCreateNewGroup(group);
+        }
+    }
+});
+
+async function clickCreateNewGroup(group) {
     //todo popup
 
     const currentGroup = await getCurrentGroup();
