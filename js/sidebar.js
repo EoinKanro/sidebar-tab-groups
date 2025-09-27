@@ -200,6 +200,7 @@ async function updateActiveGroupButton() {
 
 async function createOrUpdateGroupButtonIconAndName(group) {
   await createOrUpdateGroupButton(group, (groupButton, group) => {
+    groupButton.title = group.name;
     groupButton.setAttribute(groupNameAttribute, group.name);
     groupButton.children[0].textContent = group.icon;
   })
@@ -265,6 +266,10 @@ async function openGroupEditor(groupId) {
 browser.contextMenus.onClicked.addListener(handleContextMenuClick);
 
 async function handleContextMenuClick(info, tab) {
+  if (!document.hasFocus()) {
+    return;
+  }
+
   try {
     if (info.menuItemId === moveGroupsContextId) {
       //allow moving buttons
