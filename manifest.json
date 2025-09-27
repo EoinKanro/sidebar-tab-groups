@@ -5,7 +5,7 @@
   "description": "A custom tab management extension in the sidebar",
   "permissions": ["tabs", "storage"],
   "sidebar_action": {
-    "default_panel": "sidebar.html",
+    "default_panel": "html/sidebar.html",
     "default_title": "Tab Manager"
   },
   "background": {

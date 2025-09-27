@@ -187,7 +187,7 @@ async function openGroupEditor() {
     const viewportHeight = Math.round(activeWindow.height * 0.5);
 
     browser.windows.create({
-        url: browser.runtime.getURL("editGroup.html"),
+        url: browser.runtime.getURL("../html/editGroup.html"),
         type: "popup",
         width: viewportWidth,
         height: viewportHeight
