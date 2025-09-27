@@ -20,7 +20,7 @@ await initDatabase();
 
 await deleteActiveGroup(false);
 await deleteGroupToEdit();
-await saveWindowId(await getLatestWindowId());
+await saveWindowId((await getLatestWindow()).id);
 await reloadGroups();
 
 const selectedName = "selected";
@@ -28,7 +28,7 @@ const selectedName = "selected";
 //Open create group on click
 document.getElementById('create-group').addEventListener('click', async () => {
     await deleteGroupToEdit()
-    openGroupEditor();
+    await openGroupEditor();
 });
 
 //Reload groups in sidebar on any updates
@@ -92,7 +92,7 @@ async function createButton(group, selected) {
 
         const groupToEdit = await getGroup(group.id, true);
         await saveGroupToEdit(groupToEdit);
-        openGroupEditor();
+        await openGroupEditor();
     });
 
     //add button
@@ -103,7 +103,7 @@ async function createButton(group, selected) {
 async function openTabs(group) {
     //delete to prevent updating group in background
     await deleteActiveGroup(true);
-    const windowId = await getLatestWindowId();
+    const windowId = (await getLatestWindow()).id;
 
     group.windowId = windowId;
 
@@ -158,22 +158,28 @@ async function openTabs(group) {
     await saveActiveGroup(group, true)
 }
 
-async function getLatestWindowId() {
+async function getLatestWindow() {
     try {
         let currentWindow = await browser.windows.getCurrent();
 
         if (!currentWindow || !currentWindow.focused) {
             currentWindow = await browser.windows.getLastFocused();
         }
-        return currentWindow.id;
+        return currentWindow;
     } catch (error) {
         return null;
     }
 }
 
-function openGroupEditor() {
+async function openGroupEditor() {
+    const activeWindow = await getLatestWindow();
+    const viewportWidth = Math.round(activeWindow.width * 0.6);
+    const viewportHeight = Math.round(activeWindow.height * 0.5);
+
     browser.windows.create({
         url: browser.runtime.getURL("editGroup.html"),
-        type: "popup"
+        type: "popup",
+        width: viewportWidth,
+        height: viewportHeight
     })
 }
