@@ -1,4 +1,3 @@
-//todo windowId?
 import {
     getFromDatabase,
     getAllFromDatabase,
