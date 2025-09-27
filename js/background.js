@@ -115,12 +115,12 @@ async function initBackupInterval() {
         clearInterval(backupInterval);
         console.log("Backup turned off");
     } else if (enableBackup && backupMinutes && backupMinutes > 0) {
-        console.log(`Starting backup every ${backupMinutes} minutes`)
+        console.log(`Starting backup every ${backupMinutes} minutes`);
 
         if (backupInterval) {
-            clearInterval(backupInterval)
+            clearInterval(backupInterval);
         }
-        backupInterval = setInterval(backupGroups, backupMinutes * 60 * 1000)
+        backupInterval = setInterval(backupGroups, backupMinutes * 60 * 1000);
         await backupGroups();
     }
 }
@@ -134,7 +134,7 @@ async function backupGroups() {
         return;
     }
 
-    const diff = (now - lastBackupTime) / 1000 / 60
+    const diff = (now - lastBackupTime) / 1000 / 60;
     const backupMinutes = await getBackupMinutes();
 
     if (diff >= backupMinutes || backupMinutes - diff < 0.1) {
@@ -150,7 +150,7 @@ async function backup() {
     const url = URL.createObjectURL(blob);
     const now = new Date().getTime();
 
-    const name = `SidebarTabGroups/${now}.json`
+    const name = `SidebarTabGroups/${now}.json`;
 
     // Use the downloads API to create the file in the Downloads folder
     browser.downloads.download({
