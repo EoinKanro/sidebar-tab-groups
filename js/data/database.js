@@ -1,4 +1,9 @@
-import { getFromDatabase, getAllFromDatabase, saveInDatabase, deleteFromDatabase } from "./events.js"
+import {
+    getFromDatabase,
+    getAllFromDatabase,
+    saveInDatabase,
+    deleteFromDatabase
+} from "./events.js"
 
 //TODO REMOVE
 indexedDB.deleteDatabase("SidebarTabGroups")
@@ -14,24 +19,23 @@ export const tabGroupsName = "tab-groups";
 let db;
 
 export async function initDatabase() {
-    /**
-     * Initialize database requests handler
-     */
-     browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-        console.log("got db request")
-        switch (message.command) {
-            case getFromDatabase:
-                sendResponse(await getData(message.data));
-                break;
-            case getAllFromDatabase:
-                sendResponse(await getAllData(message.data));
-                break;
-            case saveInDatabase:
-                sendResponse(await saveData(message.data));
-                break;
-            case deleteFromDatabase:
-                sendResponse(await deleteData(message.data));
-                break;
+    //Initialize database requests handlers for outside contexts
+     await browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+        console.log("got db request", message);
+        let result;
+
+        if (message.command === getFromDatabase) {
+            result = await getData(message.data);
+        } else if (message.command === getAllFromDatabase) {
+            result = await getAllData(message.data);
+        } else if (message.command === saveInDatabase) {
+            result = await saveData(message.data)
+        } else if (message.command === deleteFromDatabase) {
+            result = await deleteData(message.data);
+        }
+
+        if (result) {
+            sendResponse({result})
         }
     });
 
@@ -66,7 +70,7 @@ export async function initDatabase() {
 /**
  * @returns {Promise<unknown>} array/null
  */
-function getAllData(request) {
+export function getAllData(request) {
     console.log(`Getting all from ${request.storeName}`)
 
     return new Promise(async (resolve) => {
@@ -87,7 +91,7 @@ function getAllData(request) {
             }
         };
         requestDb.onerror = function (event) {
-            console.log(`Got all with error: ${event.errorCode}`)
+            console.log(`Got all with error: }`, event)
             resolve(null);
         };
     });
@@ -96,7 +100,7 @@ function getAllData(request) {
 /**
  * @returns {Promise<unknown>} obj/null
  */
-function getData(request) {
+export function getData(request) {
     console.log(`Getting ${request.data} from ${request.storeName}`)
 
     return new Promise(async (resolve, reject) => {
@@ -109,7 +113,7 @@ function getData(request) {
             resolve(event.target.result || null);
         };
         requestDb.onerror = function (event) {
-            console.log(`Got ${toJson(request.data)} with error: ${toJson(event.errorCode)}`);
+            console.log(`Got ${toJson(request.data)} with error: `, event);
             resolve(null);
         };
     });
@@ -118,20 +122,20 @@ function getData(request) {
 /**
  * @returns {Promise<unknown>} true/false
  */
-function saveData(request) {
+export function saveData(request) {
     console.log(`Saving ${JSON.stringify(request.data, null, 0)} in ${request.storeName}`)
 
     return new Promise(async (resolve) => {
         const transaction = db.transaction([request.storeName], "readwrite");
         const store = transaction.objectStore(request.storeName);
 
-        const requestDb = store.add(request.data);
+        const requestDb = store.put(request.data);
         requestDb.onsuccess = function (event) {
             console.log(`Saved ${toJson(request.data)} successfully`);
             resolve(true);
         };
         requestDb.onerror = function (event) {
-            console.log(`Saved ${toJson(request.data)} with error: ${event.errorCode}`);
+            console.log(`Saved ${toJson(request.data)} with error: `, event);
             resolve(false);
         };
     });
@@ -140,7 +144,7 @@ function saveData(request) {
 /**
  * @returns {Promise<unknown>} true/false
  */
-function deleteData(request) {
+export function deleteData(request) {
     console.log(`Deleting ${request.data} from ${request.storeName}`)
 
     return new Promise(async (resolve) => {
@@ -153,7 +157,7 @@ function deleteData(request) {
             resolve(true);
         };
         requestDb.onerror = function (event) {
-            console.log(`Got ${toJson(request.data)} with error: ${event.errorCode}`);
+            console.log(`Got ${toJson(request.data)} with error: `, event);
             resolve(false);
         };
     });
