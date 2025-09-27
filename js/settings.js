@@ -1,8 +1,8 @@
 import {
     deleteActiveGroup, deleteAllGroups,
-    getBackupMinutes, getDontCloseTabs,
+    getBackupMinutes, getIfCloseTabs,
     getEnableBackup,
-    saveBackupMinutes, saveDontCloseTabs,
+    saveBackupMinutes, saveIfCloseTabs,
     saveEnableBackup, saveGroup
 } from "./data/dataStorage.js";
 import {notify, notifyBackgroundReloadAllGroups, notifyBackgroundUpdateBackup} from "./data/events.js";
@@ -51,19 +51,19 @@ const backupTime = document.getElementById('backup-time');
 const saveBackupButton = document.getElementById('save-backup-button');
 const restoreText = document.getElementById('restore-text');
 const restoreButton = document.getElementById('restore-button');
-const dontCloseTabsCheckbox = document.getElementById('close-tabs-checkbox');
+const closeTabsCheckbox = document.getElementById('close-tabs-checkbox');
 const saveTabsButton = document.getElementById('save-tabs-button');
 
 
 const isBackup = await getEnableBackup();
 const backupMinutes = await getBackupMinutes();
-const isDontCloseTabs = await getDontCloseTabs()
+const isCloseTabs = await getIfCloseTabs()
 
 backupCheckbox.checked = isBackup;
 if (backupMinutes) {
     backupTime.value = backupMinutes;
 }
-dontCloseTabsCheckbox.checked = isDontCloseTabs;
+closeTabsCheckbox.checked = isCloseTabs;
 
 //Restrict non digits
 backupTime.addEventListener('input', (event) => {
@@ -124,6 +124,6 @@ restoreButton.addEventListener('click', async (event) => {
 })
 
 saveTabsButton.addEventListener('click', async (event) => {
-    await saveDontCloseTabs(dontCloseTabsCheckbox.checked);
+    await saveIfCloseTabs(closeTabsCheckbox.checked);
     alert("Tabs settings are updated");
 });

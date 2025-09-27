@@ -25,7 +25,7 @@ const windowIdName = "windowId";
 const enableBackupName = "enableBackup";
 const backupHoursName = "backupHours";
 const lastBackupTimeName = "lastBackupTime";
-const dontCloseTabsName = "dontCloseTabs";
+const ifCloseTabsName = "ifCloseTabs";
 
 export async function getAllOpenedTabs() {
     return await browser.tabs.query({});
@@ -139,12 +139,12 @@ export async function getLastBackupTime() {
 
 
 
-export async function getDontCloseTabs() {
-    return await getFromLocalStorage(dontCloseTabsName)
+export async function getIfCloseTabs() {
+    return await getFromLocalStorage(ifCloseTabsName)
 }
 
-export async function saveDontCloseTabs(value) {
-    await saveToLocalStorage(dontCloseTabsName, value);
+export async function saveIfCloseTabs(value) {
+    await saveToLocalStorage(ifCloseTabsName, value);
 }
 
 
