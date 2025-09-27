@@ -21,9 +21,9 @@ await initDatabase();
 await deleteActiveGroup(false);
 await deleteGroupToEdit();
 await saveWindowId((await getLatestWindow()).id);
-await reloadGroups(false);
 
 const selectedName = "selected";
+await reloadGroups(true);
 
 //Open create group on click
 document.getElementById('create-group').addEventListener('click', async () => {
@@ -40,9 +40,14 @@ browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => 
 
 async function reloadGroups(isOpenTabs) {
     const allGroups = await getAllGroups(true);
-    const activeGroup = await getActiveGroup();
+    let activeGroup = await getActiveGroup();
 
     if (allGroups) {
+        //open on load browser
+        if (!activeGroup && allGroups.length > 0) {
+            activeGroup = allGroups[0];
+        }
+
         const tabButtons = document.getElementById('tab-buttons');
         tabButtons.innerHTML = '';
 
@@ -54,8 +59,6 @@ async function reloadGroups(isOpenTabs) {
 
     if (activeGroup && isOpenTabs) {
         await openTabs(activeGroup);
-    } else if (!activeGroup && allGroups && allGroups.length > 0) {
-        await openTabs(allGroups[0]);
     }
 }
 
