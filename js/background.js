@@ -93,7 +93,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 //remove tab from current group when closed
 browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-    if (isAvailableToUpdate(removeInfo.windowId)) {
+    if (!removeInfo.isWindowClosing && isAvailableToUpdate(removeInfo.windowId)) {
         console.log(`Deleting tab from current group: `, tabId, activeGroup)
 
         activeGroup.tabs = activeGroup.tabs.filter((tab) => tab.id !== tabId);
