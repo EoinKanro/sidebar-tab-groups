@@ -1,0 +1,9 @@
+.button-class {
+    border: none;
+    text-align: center;
+    cursor: pointer;
+}
+
+.button-class:hover {
+    transition: 0.6s;
+}
