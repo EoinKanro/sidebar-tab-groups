@@ -1,4 +1,11 @@
-import {deleteActiveGroup, getAllOpenedTabs, saveActiveGroup, saveGroup, Tab} from "./dataStorage.js";
+import {
+    deleteActiveGroup, getAllGroups,
+    getAllOpenedTabs, getBackupMinutes,
+    getLastBackupTime,
+    saveActiveGroup,
+    saveGroup, saveLastBackupTime,
+    Tab
+} from "./dataStorage.js";
 
 export async function getLatestWindow() {
     try {
@@ -73,4 +80,27 @@ export async function openTabs(group, notifyBackground) {
 
     //save for updating in background
     await saveActiveGroup(group, notifyBackground)
+}
+
+//save to Downloads
+export async function backupGroups() {
+    const allGroups = await getAllGroups();
+    const blob = new Blob([JSON.stringify(allGroups)], {type: 'text/plain'});
+
+    const url = URL.createObjectURL(blob);
+    const now = new Date().getTime();
+
+    const name = `SidebarTabGroups/${now}.json`;
+
+    // Use the downloads API to create the file in the Downloads folder
+    browser.downloads.download({
+        url: url,
+        filename: name,
+        saveAs: false  // Ask where to save the file
+    }).then(async (downloadId) => {
+        console.log(`Saved new backup: ${name}`);
+        await saveLastBackupTime(now);
+    }).catch((error) => {
+        console.error(`Error on backup: ${error}`);
+    });
 }
