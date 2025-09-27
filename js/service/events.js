@@ -2,24 +2,28 @@
 export const backgroundId = 1;
 export const sidebarId = 2;
 export const editGroupId = 3;
+export const tabsManagerId = 4;
 
 //background
-export const notifyBackgroundOpenTabs = 11;
-export const notifyBackgroundOpenFirstGroupTabs = 12;
-export const notifyBackgroundActiveGroupUpdated = 13;
-export const notifyBackgroundActiveGroupDeleted = 14;
-export const notifyBackgroundReinitBackup = 15;
-export const notifyBackgroundRestoreBackup = 16;
+export const notifyBackgroundOpenTabs = 10;
+export const notifyBackgroundOpenFirstGroupTabs = 11;
+export const notifyBackgroundActiveGroupUpdated = 12;
+export const notifyBackgroundActiveGroupDeleted = 13;
+export const notifyBackgroundReinitBackup = 14;
+export const notifyBackgroundRestoreBackup = 15;
 
 //sidebar
-export const notifySidebarUpdateActiveGroupButton = 21;
-export const notifySidebarReloadGroupButtons = 22;
-export const notifySidebarEditGroupClosed = 23;
-export const notifySidebarUpdateButtonsPadding = 24;
+export const notifySidebarUpdateActiveGroupButton = 20;
+export const notifySidebarReloadGroupButtons = 21;
+export const notifySidebarEditGroupClosed = 22;
+export const notifySidebarUpdateButtonsPadding = 23;
 
 //editGroup
-export const notifyEditGroupGroupChanged = 31;
-export const notifyEditGroupActiveGroupChanged = 32;
+export const notifyEditGroupGroupChanged = 30;
+export const notifyEditGroupActiveGroupChanged = 31;
+
+//tabsManager
+export const notifyTabsManagerReloadGroups = 40
 
 class Event {
     constructor(target = [], action = "", actionId = 0) {
@@ -112,5 +116,13 @@ export class EditGroupGroupChangedEvent extends Event {
 export class EditGroupActiveGroupChangedEvent extends Event {
     constructor() {
         super([editGroupId], "notifyEditGroupActiveGroupChanged", notifyEditGroupActiveGroupChanged);
+    }
+}
+
+//---------------------- Tabs Manager ----------------------------
+
+export class TabsManagerReloadGroupsEvent extends Event {
+    constructor() {
+        super([tabsManagerId], "notifyTabsManagerReloadGroups", notifyTabsManagerReloadGroups);
     }
 }

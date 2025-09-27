@@ -5,6 +5,7 @@ import {getStyle, updatePopupStyle} from "./service/styleUtils.js";
 
 const openSidebarButton = document.getElementById("open-sidebar-button");
 const settingsButton = document.getElementById("settings-button");
+const tabsManagerButton = document.getElementById("tabs-manager-button");
 const style = getStyle("js-style");
 
 //------------------------------- Init -----------------------------------
@@ -31,14 +32,24 @@ openSidebarButton.onclick = function () {
 };
 
 settingsButton.onclick = async function () {
+    await openPopup("../html/settings.html", 0.6, 0.5);
+};
+
+tabsManagerButton.onclick = async function () {
+    await openPopup("../html/tabsManager.html", 0.8, 0.8);
+}
+
+//-------------------- Utils ----------------------------
+
+async function openPopup(url, widthMultiplier, heightMultiplier) {
     const activeWindow = await getLatestWindow();
-    const viewportWidth = Math.round(activeWindow.width * 0.6);
-    const viewportHeight = Math.round(activeWindow.height * 0.5);
+    const viewportWidth = Math.round(activeWindow.width * widthMultiplier);
+    const viewportHeight = Math.round(activeWindow.height * heightMultiplier);
 
     browser.windows.create({
-        url: browser.runtime.getURL("../html/settings.html"),
+        url: browser.runtime.getURL(url),
         type: "popup",
         width: viewportWidth,
         height: viewportHeight
     })
-};
+}
