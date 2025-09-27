@@ -1,6 +1,6 @@
 # Sidebar Tab Groups
 
-It's an addon for Firefox. With it you can manage your tabs
+It's an addon for Firefox. Using it you can manage your tabs
 via tab groups in sidebar.
 
 I was inspired by Opera GX sidebar and wanted something
