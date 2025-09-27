@@ -1,335 +1,385 @@
-
 import {
-    BackgroundActiveGroupUpdatedEvent,
-    BackgroundOpenTabsEvent, EditGroupGroupChangedEvent,
-    notify, notifySidebarEditGroupClosed,
-    notifySidebarReloadGroupButtons,
-    notifySidebarUpdateActiveGroupButton, notifySidebarUpdateButtonsPadding,
-    sidebarId
-} from "./service/events.js";
-import {getAllGroups, saveGroup} from "./data/databaseStorage.js";
-import {deleteGroupToEditId, getActiveGroupId, saveActiveWindowId, saveGroupToEditId} from "./data/localStorage.js";
-import {getLatestWindow} from "./service/utils.js";
-import {getStyle, updateSidebarButtonsPadding, updateSidebarStyle} from "./service/styleUtils.js";
+  getOrCreateStyleElement,
+  initThemeStyle,
+  updateSidebarButtonsPadding,
+  updateSidebarStyle
+} from "./service/styleUtils.js";
+import {
+  deletedGroupName,
+  enableDebugLogsName,
+  getEnableDebugLogs,
+  getWindowIdGroupId,
+  saveGroupToEditId,
+  saveUpdatedGroup,
+  sidebarButtonsPaddingPxName,
+  updatedGroupName,
+  windowIdGroupIdName
+} from "./data/localStorage.js";
+import {
+  focusWindow,
+  getCurrentWindow,
+  getExtensionPopupWithName,
+  openPopup
+} from "./service/browserUtils.js";
+import {notifyOpenTabGroup} from "./service/notifications.js";
+import {getAllGroups, getGroup} from "./data/databaseStorage.js";
+import {Logger} from "./service/logUtils.js";
 
-const editGroupContextMenuIdPattern = "edit-group-";
+//----------------------- Document elements --------------------------
+
+const tabButtons = document.getElementById('tab-buttons');
+const sidebarButtonsPadding = getOrCreateStyleElement("style-buttons-padding");
+
+//ids for context menu
 const moveGroupsContextId = "move-groups";
 const stopMoveGroupsContextId = "stop-move-groups";
-const groupIdAttribute = "groupId";
-const selectedClass = "selected";
+const editGroupContextMenuIdPattern = "edit-group-";
+//classes for style
 const shakeClass = "shake";
+const selectedClass = "selected";
+//attribute for sorting and style
+const groupIdAttribute = "groupId";
+const groupNameAttribute = "groupName";
 
-let editGroupOpened = false;
+//temp
 let movingButtons = false;
 let draggedButton = null;
 
-//----------------------- Document elements ------------------------------
-const tabButtons = document.getElementById('tab-buttons');
-const styleTheme = getStyle("style-theme")
-const styleButtonsPadding = getStyle("style-buttons-padding");
+let activeGroupId;
+const logger = new Logger(await getEnableDebugLogs(), "sidebar");
+const currentWindowId = (await getCurrentWindow()).id;
 
-//--------------------------------- Init --------------------------------
+//----------------------- Initialization --------------------------
 
-await reloadGroupButtons();
-await loadButtonsPadding();
-loadThemeFromBrowser();
+await init();
 
-function loadThemeFromBrowser() {
-    browser.theme.getCurrent().then(theme => {
-        loadTheme(theme);
+async function init() {
+  initThemeStyle(updateSidebarStyle);
+
+  await updateSidebarButtonsPadding(sidebarButtonsPadding);
+  await updateActiveGroupId();
+  await reloadGroupButtons();
+}
+
+//----------------------- Document actions --------------------------
+
+async function updateActiveGroupId() {
+  const windowIdGroupId = await getWindowIdGroupId();
+  if (windowIdGroupId !== undefined && windowIdGroupId) {
+    activeGroupId = windowIdGroupId.get(currentWindowId);
+    return;
+  }
+
+  activeGroupId = null;
+}
+
+async function reloadGroupButtons() {
+  const allGroups = await getAllGroups();
+
+  if (allGroups) {
+    allGroups.sort((a, b) => {
+      if (a.index >= 0 && b.index >= 0) {
+        //sort by index if both positive
+        return a.index - b.index;
+      } else if (a.index >= 0 && (b.index === undefined || b.index < 0)) {
+        //a positive first
+        return -1;
+      } else if ((a.index === undefined || a.index < 0) && b.index >= 0) {
+        //b positive first
+        return 1;
+      } else if ((a.index === undefined  || a.index < 0) && (b.index === undefined || b.index < 0)) {
+        //both negative. sort by id
+        return a.id - b.id;
+      }
+      return 0;
+    });
+
+    tabButtons.replaceChildren();
+
+    allGroups.forEach((group) => {
+      const selected = group.id === activeGroupId;
+      createGroupButton(group, selected);
     })
+  }
 }
 
-function loadTheme(theme) {
-    updateSidebarStyle(styleTheme, theme);
-}
+async function createGroupButton(group) {
+  const button = document.createElement('button');
+  button.title = group.name;
 
-async function loadButtonsPadding() {
-    await updateSidebarButtonsPadding(styleButtonsPadding);
-}
+  button.classList.add('button-class');
+  button.setAttribute(groupIdAttribute, group.id);
+  button.setAttribute(groupNameAttribute, group.name);
 
-//----------------------- Event listeners --------------------------
+  //make draggable if in edit mode
+  if (movingButtons) {
+    button.draggable = true;
+    button.classList.add(shakeClass);
+  }
 
-//update theme on change
-browser.theme.onUpdated.addListener(({ theme }) => {
-    loadTheme(theme);
-});
+  //set selected
+  if (activeGroupId && activeGroupId === group.id) {
+    button.classList.add(selectedClass);
+  }
 
-const lightSchemeMedia = window.matchMedia('(prefers-color-scheme: light)');
-lightSchemeMedia.addEventListener('change', loadThemeFromBrowser);
+  //add icon
+  const span = document.createElement('span');
+  span.classList.add('material-symbols-outlined');
+  span.textContent = group.icon;
 
-browser.runtime.onMessage.addListener( async (message, sender, sendResponse) => {
-    try {
-        if (!message.target.includes(sidebarId)) {
-            return;
-        }
+  button.appendChild(span);
 
-        if (message.actionId === notifySidebarUpdateActiveGroupButton) {
-            await updateActiveGroupButton();
-        } else if (message.actionId === notifySidebarReloadGroupButtons) {
-            await reloadGroupButtons();
-        } else if (message.actionId === notifySidebarEditGroupClosed) {
-            editGroupOpened = false;
-        } else if (message.actionId === notifySidebarUpdateButtonsPadding) {
-            await loadButtonsPadding();
-        }
-    } catch (e) {
-        console.error(e);
+  //call background to open group on left click
+  button.onclick = async function () {
+    //don't open if already opened
+    if (activeGroupId && activeGroupId === group.id) {
+      return;
     }
-});
+
+    //call background to open tabs
+    notifyOpenTabGroup(currentWindowId, group.id);
+  }
+
+  //update style on drag
+  //change appearance during drag
+  button.ondragstart = function (event) {
+    event.target.style.opacity = 0.4;
+    draggedButton = event.target;
+  };
+
+  //reset appearance after drag
+  button.ondragend = function (event) {
+    event.target.style.opacity = '';
+  }
+
+  //add edit button to context menu on right click
+  button.oncontextmenu = function () {
+    //remove any existing custom context menu to avoid duplicates
+    browser.contextMenus.removeAll();
+
+    browser.contextMenus.create({
+      id: `${editGroupContextMenuIdPattern}${group.id}`,
+      title: `Edit Group ${button.getAttribute(groupNameAttribute)}`,
+      contexts: ["all"]
+    });
+
+    if (!movingButtons) {
+      browser.contextMenus.create({
+        id: moveGroupsContextId,
+        title: "Move groups",
+        contexts: ["all"]
+      });
+    } else {
+      browser.contextMenus.create({
+        id: stopMoveGroupsContextId,
+        title: "Stop moving groups",
+        contexts: ["all"]
+      });
+    }
+  }
+
+  //add button
+  tabButtons.appendChild(button);
+}
+
+async function updateActiveGroupButton() {
+  if (tabButtons.children.length <= 0) {
+    return;
+  }
+
+  for (let groupButton of tabButtons.children) {
+    const groupId = Number(groupButton.getAttribute(groupIdAttribute));
+
+    if (groupId !== activeGroupId) {
+      groupButton.classList.remove(selectedClass);
+    } else {
+      groupButton.classList.add(selectedClass);
+    }
+  }
+}
+
+async function createOrUpdateGroupButtonIconAndName(group) {
+  await createOrUpdateGroupButton(group, (groupButton, group) => {
+    groupButton.setAttribute(groupNameAttribute, group.name);
+    groupButton.children[0].textContent = group.icon;
+  })
+}
+
+async function createOrUpdateGroupButtonIndex(group) {
+  await createOrUpdateGroupButton(group, (groupButton, group) => {
+    const ref = tabButtons.children[group.index] ?? null;
+    parent.insertBefore(groupButton, ref);
+  });
+}
+
+async function createOrUpdateGroupButton(group, updateFunction) {
+  let groupButton = await getGroupButtonById(group.id);
+
+  if (!groupButton) {
+    await createGroupButton(group);
+    return;
+  }
+
+  await updateFunction(groupButton, group);
+}
+
+async function deleteGroupButton(groupId) {
+  let groupButton = await getGroupButtonById(groupId);
+  if (groupButton) {
+    tabButtons.removeChild(groupButton);
+  }
+}
+
+async function getGroupButtonById(groupId) {
+  return tabButtons.querySelector(
+      `[groupId="${CSS.escape(groupId)}"]`
+  );
+}
+
+function updateTabGroupsButtonsDraggable(draggable) {
+  for (let groupButton of tabButtons.children) {
+    groupButton.draggable = draggable;
+
+    if (draggable) {
+      groupButton.classList.add(shakeClass);
+    } else {
+      groupButton.classList.remove(shakeClass);
+    }
+  }
+}
+
+async function openGroupEditor(groupId) {
+  await saveGroupToEditId(groupId);
+
+  let popup = await getExtensionPopupWithName("html/editGroup.html");
+  if (popup) {
+    await focusWindow(popup.id);
+  } else {
+    await openPopup("../html/editGroup.html", 0.6, 0.5);
+  }
+}
+
+//----------------------- Event Listeners --------------------------
 
 // context menu actions
 browser.contextMenus.onClicked.addListener(handleContextMenuClick);
 
-// Remove context menu listener when the sidebar closes
-window.addEventListener("unload", () => {
-    browser.contextMenus.onClicked.removeListener(handleContextMenuClick); // Remove listener
-});
-
 async function handleContextMenuClick(info, tab) {
-    try {
-        if (info.menuItemId === moveGroupsContextId) {
-            //allow moving buttons
-            movingButtons = true;
-            updateTabGroupsButtonsDraggable(true);
-        } else if (info.menuItemId === stopMoveGroupsContextId) {
-            //stop moving buttons
-            movingButtons = false;
-            updateTabGroupsButtonsDraggable(false);
-        } else if (info.menuItemId.startsWith(editGroupContextMenuIdPattern)) {
-            //open group editor
-            const id = info.menuItemId.replace(editGroupContextMenuIdPattern,"");
-            await openGroupEditor(Number(id));
-        }
-    } catch (e) {
-        console.error(e);
+  try {
+    if (info.menuItemId === moveGroupsContextId) {
+      //allow moving buttons
+      movingButtons = true;
+      updateTabGroupsButtonsDraggable(true);
+    } else if (info.menuItemId === stopMoveGroupsContextId) {
+      //stop moving buttons
+      movingButtons = false;
+      updateTabGroupsButtonsDraggable(false);
+    } else if (info.menuItemId.startsWith(editGroupContextMenuIdPattern)) {
+      //open group editor
+      const id = info.menuItemId.replace(editGroupContextMenuIdPattern,"");
+      await openGroupEditor(Number(id));
     }
+  } catch (e) {
+    console.error(e);
+  }
 }
+
+browser.storage.onChanged.addListener(async (changes, area) => {
+  try {
+    if (area !== 'local') {
+      return;
+    }
+
+    logger.logInfo("Processing local storage changes...", changes)
+    if (sidebarButtonsPaddingPxName in changes) {
+      //update  style
+      await updateSidebarButtonsPadding(sidebarButtonsPadding);
+    } else if (updatedGroupName in changes) {
+      //update button
+      let update = changes[updatedGroupName]?.newValue;
+      if (update === undefined || !update || update.changes === undefined || !update.changes) {
+        return;
+      }
+
+      if ('name' in update.changes) {
+        await createOrUpdateGroupButtonIconAndName(update.data);
+      }
+      if ('index' in update.changes) {
+        await createOrUpdateGroupButtonIndex(update.data);
+      }
+    } else if (deletedGroupName in changes) {
+      //delete button
+      const groupId = changes[deletedGroupName]?.newValue?.data
+      if (groupId === undefined || !groupId) {
+        return;
+      }
+      await deleteGroupButton(groupId);
+    } else if (windowIdGroupIdName in changes) {
+      //update active group button
+      await updateActiveGroupId();
+      await updateActiveGroupButton();
+    } else if (enableDebugLogsName in changes) {
+      //logs
+      logger.enabled = changes[enableDebugLogsName].newValue;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+});
 
 //open group editor on click new group
 document.getElementById('create-group').onclick = async function () {
-    await openGroupEditor(null);
+  await openGroupEditor(null);
 }
 
 //allow dragging over other buttons (necessary to trigger drop)
 tabButtons.ondragover = function (event)  {
-    event.preventDefault(); //allow the drop
+  event.preventDefault(); //allow the drop
 }
 
 //handle the drop event to reorder buttons by index
 tabButtons.ondrop = async function (event) {
-    event.preventDefault(); //required to trigger the drop event
+  event.preventDefault(); //required to trigger the drop event
 
-    //get the closest button under the drop position
-    const targetButton = document.elementFromPoint(event.clientX, event.clientY).closest('.button-class');
+  //get the closest button under the drop position
+  const targetButton = document.elementFromPoint(event.clientX, event.clientY).closest('.button-class');
 
-    if (targetButton && draggedButton !== targetButton) {
-        const allGroups = await getAllGroups();
+  if (targetButton && draggedButton !== targetButton) {
+    const allButtons = Array.from(tabButtons.children);
+    const draggedIndex = allButtons.indexOf(draggedButton);
+    const targetIndex = allButtons.indexOf(targetButton);
 
-        const allButtons = Array.from(tabButtons.children);
-        const draggedIndex = allButtons.indexOf(draggedButton);
-        const targetIndex = allButtons.indexOf(targetButton);
-
-        //reorder the buttons based on their indexes
-        if (draggedIndex > targetIndex) {
-            //insert before
-            tabButtons.insertBefore(draggedButton, targetButton);
-        } else {
-            //insert after
-            tabButtons.insertBefore(draggedButton, targetButton.nextSibling);
-        }
-
-        const activeGroupId = await getActiveGroupId();
-        const sortedGroupIds = [];
-        for (let groupButton of tabButtons.children) {
-            sortedGroupIds.push(Number(groupButton.getAttribute(groupIdAttribute)));
-        }
-
-        //update indexes
-        for (let i = 0; i < sortedGroupIds.length; i++) {
-            const groupToUpdate = allGroups.find(group => group.id === sortedGroupIds[i]);
-
-            if (groupToUpdate.index === i) {
-                continue;
-            }
-
-            groupToUpdate.index = i;
-            if (activeGroupId === groupToUpdate.id) {
-                notify(new BackgroundActiveGroupUpdatedEvent(groupToUpdate));
-            } else {
-                await saveGroup(groupToUpdate);
-            }
-        }
-    }
-
-    draggedButton = null;
-}
-
-//-------------------------- Document actions -------------------------
-
-async function updateActiveGroupButton() {
-    if (tabButtons.children.length <= 0) {
-        return;
-    }
-
-    const activeGroupId = await getActiveGroupId();
-    for (let groupButton of tabButtons.children) {
-        const groupId = Number(groupButton.getAttribute(groupIdAttribute));
-
-        if (groupId !== activeGroupId) {
-            groupButton.classList.remove(selectedClass);
-        } else {
-            groupButton.classList.add(selectedClass);
-        }
-    }
-}
-
-async function reloadGroupButtons() {
-    const allGroups = await getAllGroups();
-    const activeGroupId = await getActiveGroupId();
-
-    if (allGroups) {
-        allGroups.sort((a, b) => {
-            if (a.index >= 0 && b.index >= 0) {
-                //sort by index if both positive
-                return a.index - b.index;
-            } else if (a.index >= 0 && (b.index === undefined || b.index < 0)) {
-                //a positive first
-                return -1;
-            } else if ((a.index === undefined || a.index < 0) && b.index >= 0) {
-                //b positive first
-                return 1;
-            } else if ((a.index === undefined  || a.index < 0) && (b.index === undefined || b.index < 0)) {
-                //both negative. sort by id
-                return a.id - b.id;
-            }
-            return 0;
-        });
-
-        tabButtons.replaceChildren();
-
-        allGroups.forEach((group) => {
-            const selected = group.id === activeGroupId;
-            createGroupButton(group, selected);
-        })
-    }
-}
-
-async function createGroupButton(group, selected) {
-    const button = document.createElement('button');
-    button.title = group.name;
-
-    button.classList.add('button-class');
-    button.setAttribute(groupIdAttribute, group.id);
-
-    //make draggable if in edit mode
-    if (movingButtons) {
-        button.draggable = true;
-        button.classList.add(shakeClass);
-    }
-
-    //set style selected
-    if (selected) {
-        button.classList.add(selectedClass);
-    }
-
-    const span = document.createElement('span');
-    span.classList.add('material-symbols-outlined');
-    span.textContent = group.icon;
-
-    button.appendChild(span);
-
-    //call background to open group on left click
-    button.onclick = async function () {
-        //don't open if already opened
-        const activeGroup = await getActiveGroupId();
-        if (activeGroup && activeGroup === group.id) {
-            return;
-        }
-
-        //save current window id to open all tabs here
-        await saveActiveWindowId((await getLatestWindow()).id)
-
-        //call background
-        notify(new BackgroundOpenTabsEvent(group.id))
-    }
-
-    //update style on drag
-    //change appearance during drag
-    button.ondragstart = function (event) {
-        event.target.style.opacity = 0.4;
-        draggedButton = event.target;
-    };
-
-    //reset appearance after drag
-    button.ondragend = function (event) {
-        event.target.style.opacity = '';
-    }
-
-    //add edit button to context menu on right click
-    button.oncontextmenu = function () {
-        //remove any existing custom context menu to avoid duplicates
-        browser.contextMenus.removeAll();
-
-        browser.contextMenus.create({
-            id: `${editGroupContextMenuIdPattern}${group.id}`,
-            title: `Edit Group ${group.name}`,
-            contexts: ["all"]
-        });
-
-        if (!movingButtons) {
-            browser.contextMenus.create({
-                id: moveGroupsContextId,
-                title: "Move groups",
-                contexts: ["all"]
-            });
-        } else {
-            browser.contextMenus.create({
-                id: stopMoveGroupsContextId,
-                title: "Stop moving groups",
-                contexts: ["all"]
-            });
-        }
-    }
-
-    //add button
-    tabButtons.appendChild(button);
-}
-
-async function openGroupEditor(groupId) {
-    if (!groupId) {
-        await deleteGroupToEditId()
+    //reorder the buttons based on their indexes
+    if (draggedIndex > targetIndex) {
+      //insert before
+      tabButtons.insertBefore(draggedButton, targetButton);
     } else {
-        await saveGroupToEditId(groupId);
+      //insert after
+      tabButtons.insertBefore(draggedButton, targetButton.nextSibling);
     }
 
-    //don't open page again, just reload content
-    if (editGroupOpened) {
-        notify(new EditGroupGroupChangedEvent());
-        return
-    }
-
-    const activeWindow = await getLatestWindow();
-    const viewportWidth = Math.round(activeWindow.width * 0.6);
-    const viewportHeight = Math.round(activeWindow.height * 0.5);
-
-    editGroupOpened = true;
-    browser.windows.create({
-        url: browser.runtime.getURL("../html/editGroup.html"),
-        type: "popup",
-        width: viewportWidth,
-        height: viewportHeight
-    })
-}
-
-function updateTabGroupsButtonsDraggable(draggable) {
+    const sortedGroupIds = [];
     for (let groupButton of tabButtons.children) {
-        groupButton.draggable = draggable;
-
-        if (draggable) {
-            groupButton.classList.add(shakeClass);
-        } else {
-            groupButton.classList.remove(shakeClass);
-        }
+      sortedGroupIds.push(Number(groupButton.getAttribute(groupIdAttribute)));
     }
+
+    //update indexes
+    for (let i = 0; i < sortedGroupIds.length; i++) {
+      const groupToUpdate = await getGroup(sortedGroupIds[i]);
+
+      if (groupToUpdate === undefined || !groupToUpdate) {
+        console.warn("Can't find group " + sortedGroupIds[i]);
+        continue;
+      }
+
+      if (groupToUpdate.index === i) {
+        continue;
+      }
+
+      groupToUpdate.index = i;
+      await saveUpdatedGroup(['index'], groupToUpdate)
+    }
+  }
+
+  draggedButton = null;
 }
