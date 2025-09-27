@@ -47,7 +47,7 @@ async function reloadGroups() {
         tabButtons.innerHTML = '';
 
         allGroups.forEach((group) => {
-            const selected = group.id === activeGroup.id;
+            const selected = group.id === activeGroup?.id;
             createButton(group, selected);
         })
     }
