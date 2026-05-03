@@ -1,3 +1,5 @@
+MOVED to https://gitlab.com/eoin.kanro/apps/sidebar-tab-groups
+
 # Sidebar Tab Groups
 
 It's an addon for Firefox. Using it you can manage your tabs
